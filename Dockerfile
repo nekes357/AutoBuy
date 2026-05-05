@@ -6,10 +6,20 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# System deps for psycopg (libpq) and curl for the healthcheck.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libpq5 curl \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY pyproject.toml ./
-RUN pip install --upgrade pip && pip install .
+# Install with the [postgres] extra so prod has psycopg.
+RUN pip install --upgrade pip && pip install ".[postgres]"
 
 COPY src ./src
 
 EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -fsS http://localhost:8000/health || exit 1
+
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

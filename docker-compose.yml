@@ -3,8 +3,12 @@ services:
     build: .
     image: autobuy:latest
     env_file: .env
-    ports:
-      - "8000:8000"
+    environment:
+      # Force Postgres in docker-compose; overrides DATABASE_URL from .env
+      # so an accidental sqlite URL in .env won't silently lose data on rebuild.
+      DATABASE_URL: postgresql+psycopg://autobuy:autobuy@db:5432/autobuy
+    expose:
+      - "8000"
     depends_on:
       db:
         condition: service_healthy
@@ -23,6 +27,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
 
   caddy:
     image: caddy:2-alpine

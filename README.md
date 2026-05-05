@@ -72,34 +72,19 @@ pytest -q
 
 ---
 
-## Деплой на Reg.ru VPS (рекомендуемый сценарий)
+## Деплой на Reg.ru VPS
 
-Цель — получить публичный HTTPS-URL вида `https://autobuy.example.com/jd/callback`, который можно зарегистрировать в кабинете JD VOP для выдачи production-ключей.
+Полный пошаговый runbook — в [`docs/deploy_regru.md`](docs/deploy_regru.md).
+Краткий summary:
 
-1. **Заказать VPS** в Reg.ru (минимально: 1 vCPU / 1 GB RAM / Ubuntu 22.04 — около 250–400 ₽/мес).
-2. **Привязать домен** в DNS Reg.ru: A-запись `autobuy.example.com → IP вашего VPS`.
-3. **Подготовить сервер:**
-   ```bash
-   ssh root@<ip>
-   apt update && apt install -y docker.io docker-compose-plugin git
-   git clone <ваш-репо> /opt/autobuy && cd /opt/autobuy
-   cp .env.example .env && nano .env   # заполнить креды
-   sed -i 's/example.com/autobuy.example.com/' Caddyfile
-   docker compose up -d
-   ```
-4. **Проверить HTTPS:**
-   ```bash
-   curl https://autobuy.example.com/health
-   ```
-   Caddy сам выпустит Let's Encrypt-сертификат.
-5. **Зарегистрироваться в JD VOP:**
-   - Зайти в личный кабинет JD VOP (https://vop.jd.com), создать приложение.
-   - Указать `Whitelisted callback URL`: `https://autobuy.example.com/jd/callback`.
-   - Получить `app_key`, `app_secret`, корпоративный `username/password`.
-   - Прописать их в `/opt/autobuy/.env`, переключить `JD_MODE=live`, перезапустить:
-     ```bash
-     docker compose restart app
-     ```
+1. Заказать VPS в Reg.ru (1 vCPU / 1 GB / Ubuntu 22.04, ~300 ₽/мес).
+2. В DNS Reg.ru — A-запись `autobuy.example.com → IP VPS`.
+3. На сервере поставить Docker, склонировать репозиторий, заполнить `.env`,
+   подставить домен в `Caddyfile`, запустить `docker compose up -d --build`.
+4. Проверить `curl https://autobuy.example.com/health`.
+5. Зарегистрировать `JD_CALLBACK_URL = https://autobuy.example.com/jd/callback`
+   в кабинете JD VOP, получить ключи, переключить `JD_MODE=live` в `.env`,
+   `docker compose restart app`.
 
 ### Альтернативные хостинги
 

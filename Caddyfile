@@ -1,10 +1,21 @@
-# Replace example.com with your domain registered in Reg.ru DNS.
-# Caddy will provision Let's Encrypt certificates automatically.
-example.com {
+# Заменить autobuy.example.com на ваш домен из Reg.ru.
+# Caddy сам выпустит и обновит сертификат Let's Encrypt — ничего настраивать
+# отдельно не нужно. Главное: A-запись домена должна указывать на IP VPS,
+# а порты 80 и 443 должны быть открыты.
+
+autobuy.example.com {
     reverse_proxy app:8000
     encode gzip
+
     log {
         output stdout
         format json
+    }
+
+    # Базовая защита от любопытных ботов: блокируем чтение служебных путей
+    # без API-ключа (FastAPI всё равно вернёт 401, но так это случится раньше).
+    @admin path /sync/run /sync/logs /orders /orders/*
+    handle @admin {
+        reverse_proxy app:8000
     }
 }
