@@ -1,0 +1,36 @@
+{
+  "100000000001": {
+    "jdOrderId": "100000000001",
+    "submitTime": "2026-05-05 09:00:00",
+    "state": "WAIT_SHIP",
+    "name": "Ivan Petrov",
+    "mobile": "+79991234567",
+    "email": "ivan@example.com",
+    "province": "Beijing",
+    "city": "Beijing",
+    "county": "Chaoyang",
+    "address": "Jianguo Rd 1, Bldg A, room 101",
+    "orderPrice": 850.0,
+    "freight": 0.0,
+    "currency": "CNY",
+    "sku": [
+      {"skuId": 100200300, "name": "USB-C Cable 1m", "num": 2, "price": 50.0, "currency": "CNY"},
+      {"skuId": 100200301, "name": "Power Bank 10000mAh", "num": 1, "price": 750.0, "currency": "CNY"}
+    ]
+  },
+  "100000000002": {
+    "jdOrderId": "100000000002",
+    "submitTime": "2026-05-05 09:05:00",
+    "state": "WAIT_SHIP",
+    "name": "Anna Sidorova",
+    "mobile": "+79997654321",
+    "province": "Shanghai",
+    "city": "Shanghai",
+    "address": "Nanjing Rd 200",
+    "orderPrice": 1200.5,
+    "currency": "CNY",
+    "sku": [
+      {"skuId": 200200400, "name": "Wireless Earbuds", "num": 1, "price": 1200.5, "currency": "CNY"}
+    ]
+  }
+}

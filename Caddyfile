@@ -1,0 +1,10 @@
+# Replace example.com with your domain registered in Reg.ru DNS.
+# Caddy will provision Let's Encrypt certificates automatically.
+example.com {
+    reverse_proxy app:8000
+    encode gzip
+    log {
+        output stdout
+        format json
+    }
+}

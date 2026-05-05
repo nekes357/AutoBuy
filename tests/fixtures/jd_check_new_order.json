@@ -1,0 +1,9 @@
+{
+  "success": true,
+  "resultCode": "0000",
+  "resultMessage": "ok",
+  "result": [
+    {"jdOrderId": "100000000001", "submitState": "submit_ok", "submitTime": "2026-05-05 09:00:00"},
+    {"jdOrderId": "100000000002", "submitState": "submit_ok", "submitTime": "2026-05-05 09:05:00"}
+  ]
+}
