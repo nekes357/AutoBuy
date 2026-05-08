@@ -13,11 +13,11 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-FIXTURES_DIR = Path(__file__).resolve().parents[2] / "tests" / "fixtures"
+SAMPLE_DATA_DIR = Path(__file__).resolve().parent / "sample_data"
 
 
 def _load(name: str) -> Any:
-    return json.loads((FIXTURES_DIR / name).read_text(encoding="utf-8"))
+    return json.loads((SAMPLE_DATA_DIR / name).read_text(encoding="utf-8"))
 
 
 class MockJdClient:
