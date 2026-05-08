@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -33,6 +33,13 @@ class Settings(BaseSettings):
 
     sync_interval_minutes: int | None = Field(default=None)
     sync_lookback_minutes: int = 60
+
+    @field_validator("sync_interval_minutes", mode="before")
+    @classmethod
+    def _empty_str_as_none(cls, v: object) -> object:
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        return v
 
 
 @lru_cache(maxsize=1)
