@@ -175,11 +175,38 @@ ufw status                  # должны быть открыты 80 и 443
 
 | Задача | Команда |
 |---|---|
-| Обновить курс CNY→RUB | `nano .env` → правка `CNY_RUB_RATE` → `docker compose restart app` |
+| Обновить курс CNY→RUB | `nano .env` → правка `CNY_RUB_RATE` → `docker compose up -d --force-recreate app` |
 | Посмотреть последние sync'и | `curl https://.../sync/logs -H "x-api-key: ..."` |
 | Бэкап БД | `docker compose exec db pg_dump -U autobuy autobuy > backup-$(date +%F).sql` |
-| Обновить код | `git pull && docker compose up -d --build` |
-| Включить периодический pull | в `.env` выставить `SYNC_INTERVAL_MINUTES=15` → `docker compose restart app` |
+| Обновить код | `git pull && docker compose up -d --build` (миграции БД применятся автоматически в entrypoint'е) |
+| Включить периодический pull | в `.env` выставить `SYNC_INTERVAL_MINUTES=15` → `docker compose up -d --force-recreate app` |
+| Просмотреть применённые миграции | `docker compose exec app alembic current` |
+| Откатить последнюю миграцию (опасно!) | `docker compose exec app alembic downgrade -1` |
+
+### Миграции БД
+
+Схема управляется Alembic. На старте контейнера `app` выполняется `python -m src.cli_migrate`, который:
+
+1. Если в БД уже есть таблицы приложения (`jd_orders`), но нет служебной `alembic_version` (как было у первых деплоев, делавшихся через `init_db()`) — выполняет `alembic stamp head`, чтобы пометить текущее состояние как актуальное без попытки повторно создавать таблицы.
+2. Затем всегда выполняет `alembic upgrade head` — поднимает БД до последней миграции (no-op, если уже на head).
+
+При выпуске новой миграции (изменение моделей):
+
+```bash
+# Локально
+. .venv/bin/activate
+alembic revision --autogenerate -m "describe change"
+# отредактировать сгенерированный файл при необходимости, закоммитить
+git push
+```
+
+На сервере:
+```bash
+cd /opt/autobuy
+git pull
+docker compose up -d --build app
+# entrypoint сам выполнит alembic upgrade head перед стартом uvicorn
+```
 
 ---
 

@@ -10,7 +10,7 @@ from fastapi import FastAPI
 
 from src.api.routes import router
 from src.config import get_settings
-from src.db import get_session_factory, init_db
+from src.db import get_session_factory
 
 
 def _configure_logging(level: str) -> None:
@@ -42,7 +42,9 @@ async def _scheduled_sync() -> None:
 async def lifespan(app: FastAPI):
     settings = get_settings()
     _configure_logging(settings.log_level)
-    init_db()
+    # Schema is managed by Alembic in production (see src/cli_migrate.py
+    # invoked from the Docker entrypoint). Tests bootstrap the schema
+    # directly via src.db.init_db().
 
     scheduler: AsyncIOScheduler | None = None
     if settings.sync_interval_minutes:

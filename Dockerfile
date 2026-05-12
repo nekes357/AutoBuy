@@ -16,10 +16,14 @@ COPY pyproject.toml ./
 RUN pip install --upgrade pip && pip install ".[postgres]"
 
 COPY src ./src
+COPY alembic ./alembic
+COPY alembic.ini ./alembic.ini
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD curl -fsS http://localhost:8000/health || exit 1
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run Alembic migrations before starting the API. `cli_migrate` handles
+# the one-time transition from create_all() to alembic-managed schemas.
+CMD ["sh", "-c", "python -m src.cli_migrate && exec uvicorn src.main:app --host 0.0.0.0 --port 8000"]
