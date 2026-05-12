@@ -65,7 +65,10 @@ def _summarize(detail_envelope: dict[str, Any], correlation_id: str) -> dict[str
 
     name = result.get("name") or result.get("consigneeName")
     phone = result.get("mobile") or result.get("phone")
-    total_cny = result.get("orderPrice") or result.get("totalPrice")
+    # Use explicit None check: `0.0 or x` returns x because 0.0 is falsy.
+    total_cny = result.get("orderPrice")
+    if total_cny is None:
+        total_cny = result.get("totalPrice")
     total_rub: float | None = None
     if isinstance(total_cny, int | float):
         total_rub = cny_to_rub(float(total_cny), correlation_id=correlation_id)
@@ -97,39 +100,46 @@ async def run_sync(
     errors: list[dict[str, Any]] = []
     fetched = 0
     new_count = 0
+    MAX_PAGES = 100  # safety cap; JD won't realistically return this many pages per window
 
     try:
-        listing = await client.check_new_orders(session, since=since, until=until)
-        order_ids = _extract_order_ids(listing)
-        bound.info("sync.listed", count=len(order_ids))
+        page = 1
+        while page <= MAX_PAGES:
+            listing = await client.check_new_orders(session, since=since, until=until, page=page)
+            order_ids = _extract_order_ids(listing)
+            bound.info("sync.page_listed", page=page, count=len(order_ids))
+            if not order_ids:
+                break
 
-        for jd_id in order_ids:
-            fetched += 1
-            try:
-                detail = await client.get_order_detail(session, jd_id)
-                summary = _summarize(detail, correlation_id)
+            for jd_id in order_ids:
+                fetched += 1
+                try:
+                    detail = await client.get_order_detail(session, jd_id)
+                    summary = _summarize(detail, correlation_id)
 
-                existing = session.execute(
-                    select(JdOrder).where(JdOrder.jd_order_id == jd_id)
-                ).scalar_one_or_none()
+                    existing = session.execute(
+                        select(JdOrder).where(JdOrder.jd_order_id == jd_id)
+                    ).scalar_one_or_none()
 
-                if existing is None:
-                    session.add(JdOrder(
-                        jd_order_id=jd_id,
-                        status="fetched",
-                        raw_payload=detail,
-                        **summary,
-                    ))
-                    new_count += 1
-                else:
-                    existing.raw_payload = detail
-                    for k, v in summary.items():
-                        setattr(existing, k, v)
-                session.commit()
-            except Exception as exc:  # noqa: BLE001
-                bound.exception("sync.order_failed", jd_order_id=jd_id)
-                errors.append({"jd_order_id": jd_id, "error": str(exc)})
-                session.rollback()
+                    if existing is None:
+                        session.add(JdOrder(
+                            jd_order_id=jd_id,
+                            status="fetched",
+                            raw_payload=detail,
+                            **summary,
+                        ))
+                        new_count += 1
+                    else:
+                        existing.raw_payload = detail
+                        for k, v in summary.items():
+                            setattr(existing, k, v)
+                    session.commit()
+                except Exception as exc:  # noqa: BLE001
+                    bound.exception("sync.order_failed", jd_order_id=jd_id)
+                    errors.append({"jd_order_id": jd_id, "error": str(exc)})
+                    session.rollback()
+
+            page += 1
     finally:
         if http is not None:
             await http.aclose()

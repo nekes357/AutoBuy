@@ -23,17 +23,20 @@ def test_sync_run_requires_api_key():
 
 
 def test_sync_run_and_list_orders():
+    # Should match EXPECTED_TOTAL in test_sync_e2e.py
+    expected_total = 11
+
     with _client() as c:
         r = c.post("/sync/run", headers={"x-api-key": "test-key"})
         assert r.status_code == 200, r.text
         body = r.json()
-        assert body["fetched"] == 2
-        assert body["new"] == 2
+        assert body["fetched"] == expected_total
+        assert body["new"] == expected_total
 
         r = c.get("/orders", headers={"x-api-key": "test-key"})
         assert r.status_code == 200
         orders = r.json()
-        assert len(orders) == 2
+        assert len(orders) == expected_total
 
         r = c.get("/orders/100000000001", headers={"x-api-key": "test-key"})
         assert r.status_code == 200

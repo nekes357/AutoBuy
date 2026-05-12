@@ -32,5 +32,152 @@
     "sku": [
       {"skuId": 200200400, "name": "Wireless Earbuds", "num": 1, "price": 1200.5, "currency": "CNY"}
     ]
+  },
+
+  "100000000003": {
+    "jdOrderId": "100000000003",
+    "submitTime": "2026-05-05 09:10:00",
+    "state": "WAIT_SHIP",
+    "consigneeName": "Sergey Volkov",
+    "phone": "010-12345678",
+    "province": "Guangdong",
+    "city": "Shenzhen",
+    "county": "Nanshan",
+    "address": "Shennan Blvd 1234, Unit 5-2003",
+    "orderPrice": 320.0,
+    "currency": "CNY",
+    "sku": [
+      {"skuId": 300100100, "name": "Tempered Glass Screen Protector", "num": 4, "price": 80.0, "currency": "CNY"}
+    ]
+  },
+
+  "100000000004": {
+    "jdOrderId": "100000000004",
+    "submitTime": "2026-05-05 09:15:00",
+    "state": "WAIT_SHIP",
+    "name": "Marina K.",
+    "mobile": "+79998887766",
+    "address": "Beijing, Chaoyang, Jianguo Rd 1, Bldg A, room 101",
+    "orderPrice": 99.0,
+    "currency": "CNY",
+    "sku": [
+      {"skuId": 400100100, "name": "Phone Case", "num": 1, "price": 99.0, "currency": "CNY"}
+    ]
+  },
+
+  "100000000005": {
+    "jdOrderId": "100000000005",
+    "submitTime": "2026-05-05 09:20:00",
+    "state": "WAIT_SHIP",
+    "name": "Wholesale Customer LLC",
+    "mobile": "+74951234567",
+    "email": "purchasing@wholesale.example.com",
+    "province": "Beijing",
+    "city": "Beijing",
+    "address": "Wholesale warehouse, Logistics center 7",
+    "orderPrice": 18450.0,
+    "currency": "CNY",
+    "sku": [
+      {"skuId": 500100001, "name": "USB Hub 4-port",     "num": 50, "price": 120.0, "currency": "CNY"},
+      {"skuId": 500100002, "name": "HDMI Cable 2m",      "num": 80, "price":  45.0, "currency": "CNY"},
+      {"skuId": 500100003, "name": "Wireless Mouse",     "num": 30, "price": 180.0, "currency": "CNY"},
+      {"skuId": 500100004, "name": "Bluetooth Keyboard", "num": 20, "price": 250.0, "currency": "CNY"},
+      {"skuId": 500100005, "name": "Webcam 1080p",       "num": 15, "price": 320.0, "currency": "CNY"},
+      {"skuId": 500100006, "name": "Laptop Stand",       "num": 25, "price":  95.0, "currency": "CNY"}
+    ]
+  },
+
+  "100000000006": {
+    "jdOrderId": "100000000006",
+    "submitTime": "2026-05-05 09:25:00",
+    "state": "CANCELLED",
+    "cancelReason": "buyer_refused",
+    "name": "Test User",
+    "mobile": "+79990000000",
+    "province": "Beijing",
+    "city": "Beijing",
+    "address": "Anywhere St 1",
+    "orderPrice": 500.0,
+    "currency": "CNY",
+    "sku": [
+      {"skuId": 600100001, "name": "Cancelled Item", "num": 1, "price": 500.0, "currency": "CNY", "state": "cancelled"}
+    ]
+  },
+
+  "100000000007": {
+    "jdOrderId": "100000000007",
+    "submitTime": "2026-05-05 09:30:00",
+    "state": "WAIT_SHIP",
+    "name": "Olga N.",
+    "mobile": "+79991112233",
+    "province": "Beijing",
+    "city": "Beijing",
+    "address": "Some Rd 5",
+    "currency": "CNY",
+    "sku": [
+      {"skuId": 700100001, "name": "Free Sample", "num": 1, "currency": "CNY"}
+    ]
+  },
+
+  "100000000008": {
+    "jdOrderId": "100000000008",
+    "submitTime": "2026-05-05 09:35:00",
+    "state": "WAIT_SHIP",
+    "name": "Empty Items Test",
+    "mobile": "+79993334455",
+    "province": "Beijing",
+    "city": "Beijing",
+    "address": "Empty Rd 0",
+    "orderPrice": 0.0,
+    "currency": "CNY",
+    "sku": []
+  },
+
+  "100000000009": {
+    "jdOrderId": "100000000009",
+    "submitTime": "2026-05-05 09:40:00",
+    "state": "WAIT_SHIP",
+    "name": "Alt Schema",
+    "mobile": "+79995556677",
+    "province": "Beijing",
+    "city": "Beijing",
+    "address": "Alt Rd 9",
+    "totalPrice": 777.77,
+    "currency": "CNY",
+    "items": [
+      {"skuId": 900100001, "name": "Alt-shape item", "num": 1, "price": 777.77, "currency": "CNY"}
+    ]
+  },
+
+  "100000000010": {
+    "jdOrderId": "100000000010",
+    "submitTime": "2026-05-05 09:45:00",
+    "state": "WAIT_SHIP",
+    "name": "Page-2 User A",
+    "mobile": "+79991010101",
+    "province": "Beijing",
+    "city": "Beijing",
+    "address": "Pagination Rd 10",
+    "orderPrice": 150.0,
+    "currency": "CNY",
+    "sku": [
+      {"skuId": 1000100001, "name": "Test SKU 10", "num": 1, "price": 150.0, "currency": "CNY"}
+    ]
+  },
+
+  "100000000011": {
+    "jdOrderId": "100000000011",
+    "submitTime": "2026-05-05 09:50:00",
+    "state": "WAIT_SHIP",
+    "name": "Page-2 User B",
+    "mobile": "+79991111122",
+    "province": "Beijing",
+    "city": "Beijing",
+    "address": "Pagination Rd 11",
+    "orderPrice": 220.0,
+    "currency": "CNY",
+    "sku": [
+      {"skuId": 1100100001, "name": "Test SKU 11", "num": 1, "price": 220.0, "currency": "CNY"}
+    ]
   }
 }

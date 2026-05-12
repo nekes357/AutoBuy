@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "resultCode": "0000",
+  "resultMessage": "ok",
+  "result": [
+    {"jdOrderId": "100000000010", "submitState": "submit_ok", "submitTime": "2026-05-05 09:45:00"},
+    {"jdOrderId": "100000000011", "submitState": "submit_ok", "submitTime": "2026-05-05 09:50:00"}
+  ],
+  "totalCount": 11,
+  "pageNo": 2,
+  "pageSize": 100
+}

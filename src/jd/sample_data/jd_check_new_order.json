@@ -4,6 +4,16 @@
   "resultMessage": "ok",
   "result": [
     {"jdOrderId": "100000000001", "submitState": "submit_ok", "submitTime": "2026-05-05 09:00:00"},
-    {"jdOrderId": "100000000002", "submitState": "submit_ok", "submitTime": "2026-05-05 09:05:00"}
-  ]
+    {"jdOrderId": "100000000002", "submitState": "submit_ok", "submitTime": "2026-05-05 09:05:00"},
+    {"jdOrderId": "100000000003", "submitState": "submit_ok", "submitTime": "2026-05-05 09:10:00"},
+    {"jdOrderId": "100000000004", "submitState": "submit_ok", "submitTime": "2026-05-05 09:15:00"},
+    {"jdOrderId": "100000000005", "submitState": "submit_ok", "submitTime": "2026-05-05 09:20:00"},
+    {"jdOrderId": "100000000006", "submitState": "cancel",    "submitTime": "2026-05-05 09:25:00"},
+    {"jdOrderId": "100000000007", "submitState": "submit_ok", "submitTime": "2026-05-05 09:30:00"},
+    {"jdOrderId": "100000000008", "submitState": "submit_ok", "submitTime": "2026-05-05 09:35:00"},
+    {"jdOrderId": "100000000009", "submitState": "submit_ok", "submitTime": "2026-05-05 09:40:00"}
+  ],
+  "totalCount": 11,
+  "pageNo": 1,
+  "pageSize": 9
 }
