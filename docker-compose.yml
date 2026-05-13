@@ -29,6 +29,32 @@ services:
       retries: 10
     restart: unless-stopped
 
+  # Automated daily Postgres backups with rotation.
+  # Dumps go to ./backups on the host:
+  #   daily/    last BACKUP_KEEP_DAYS
+  #   weekly/   last BACKUP_KEEP_WEEKS
+  #   monthly/  last BACKUP_KEEP_MONTHS
+  # `last/<DB>.sql.gz` always points at the most recent dump.
+  backup:
+    image: prodrigestivill/postgres-backup-local:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: autobuy
+      POSTGRES_USER: autobuy
+      POSTGRES_PASSWORD: autobuy
+      POSTGRES_EXTRA_OPTS: "-Z 6"
+      SCHEDULE: "@daily"
+      BACKUP_KEEP_DAYS: "14"
+      BACKUP_KEEP_WEEKS: "4"
+      BACKUP_KEEP_MONTHS: "6"
+      TZ: "Europe/Moscow"
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+
   caddy:
     image: caddy:2-alpine
     ports:

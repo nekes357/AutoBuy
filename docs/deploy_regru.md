@@ -177,11 +177,61 @@ ufw status                  # должны быть открыты 80 и 443
 |---|---|
 | Обновить курс CNY→RUB | `nano .env` → правка `CNY_RUB_RATE` → `docker compose up -d --force-recreate app` |
 | Посмотреть последние sync'и | `curl https://.../sync/logs -H "x-api-key: ..."` |
-| Бэкап БД | `docker compose exec db pg_dump -U autobuy autobuy > backup-$(date +%F).sql` |
+| Ручной бэкап БД (немедленно) | `docker compose exec backup /backup.sh` |
+| Список доступных бэкапов | `ls -lh /opt/autobuy/backups/{last,daily,weekly,monthly}/ 2>/dev/null` |
+| Восстановление из бэкапа | см. раздел «Бэкапы и восстановление» ниже |
 | Обновить код | `git pull && docker compose up -d --build` (миграции БД применятся автоматически в entrypoint'е) |
 | Включить периодический pull | в `.env` выставить `SYNC_INTERVAL_MINUTES=15` → `docker compose up -d --force-recreate app` |
 | Просмотреть применённые миграции | `docker compose exec app alembic current` |
 | Откатить последнюю миграцию (опасно!) | `docker compose exec app alembic downgrade -1` |
+
+### Бэкапы и восстановление
+
+В docker-compose работает отдельный контейнер `backup` (`prodrigestivill/postgres-backup-local`),
+который делает `pg_dump` БД `autobuy` **раз в сутки** в `./backups` на хосте, по часовому
+поясу `Europe/Moscow`. Бэкапы сжаты gzip (`-Z 6`).
+
+Структура:
+```
+backups/
+├── last/        # символическая ссылка на последний дамп каждой БД
+├── daily/       # последние 14 ежедневных
+├── weekly/      # последние 4 еженедельных
+└── monthly/     # последние 6 ежемесячных
+```
+
+Размер одного дампа на пустой БД — несколько KB; на ~1M заказов — порядка 50–200 MB.
+
+**Принудительный бэкап прямо сейчас:**
+```bash
+docker compose exec backup /backup.sh
+ls -lh backups/last/
+```
+
+**Восстановление из конкретного дампа** (приведёт к потере данных, появившихся после
+бэкапа — делать только осознанно):
+```bash
+cd /opt/autobuy
+
+# Остановить app, чтобы он не писал во время restore
+docker compose stop app
+
+# Скопировать дамп в контейнер БД и накатить
+gunzip -c backups/daily/autobuy-2026-05-12T03-00-00.sql.gz \
+    | docker compose exec -T db psql -U autobuy -d autobuy
+
+# Запустить app обратно
+docker compose start app
+```
+
+**Скачать бэкап на свой Mac** (для оффлайн-копии):
+```bash
+scp root@194.67.116.211:/opt/autobuy/backups/last/autobuy-latest.sql.gz ./
+```
+
+В долгосроке стоит дополнительно синхронизировать `./backups` на внешнее хранилище
+(S3-совместимый bucket, второй VPS, локальный NAS) через `restic` или `rclone`. Сейчас
+бэкап лежит на той же VPS — если потеряем весь сервер, потеряем и бэкапы.
 
 ### Миграции БД
 
