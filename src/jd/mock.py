@@ -52,7 +52,13 @@ class MockJdClient:
         if path.exists():
             return _load(path.name)
         # No more pages — return an empty result set in the same envelope shape.
-        return {"success": True, "resultCode": "0000", "result": [], "pageNo": page, "totalCount": 0}
+        return {
+            "success": True,
+            "resultCode": "0000",
+            "result": [],
+            "pageNo": page,
+            "totalCount": 0,
+        }
 
     async def get_order_detail(self, session: Session, jd_order_id: str) -> dict[str, Any]:
         all_details = _load("jd_order_details.json")

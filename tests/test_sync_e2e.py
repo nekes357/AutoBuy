@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
@@ -18,7 +18,7 @@ EXPECTED_PAGE_2 = 2
 
 @pytest.mark.asyncio
 async def test_sync_pulls_orders_from_mock(session):
-    until = datetime.now(timezone.utc)
+    until = datetime.now(UTC)
     since = until - timedelta(hours=1)
 
     sync_log = await run_sync(session, since=since, until=until)
@@ -44,7 +44,7 @@ async def test_sync_pulls_orders_from_mock(session):
 
 @pytest.mark.asyncio
 async def test_sync_is_idempotent(session):
-    until = datetime.now(timezone.utc)
+    until = datetime.now(UTC)
     since = until - timedelta(hours=1)
 
     first = await run_sync(session, since=since, until=until)
@@ -65,7 +65,7 @@ async def test_sync_is_idempotent(session):
 async def test_sync_handles_edge_cases_without_errors(session):
     """Run sync once and verify every edge-case fixture lands in the DB
     with sensible (but possibly partial) summary fields."""
-    until = datetime.now(timezone.utc)
+    until = datetime.now(UTC)
     since = until - timedelta(hours=1)
 
     sync_log = await run_sync(session, since=since, until=until)
@@ -112,7 +112,7 @@ async def test_sync_handles_edge_cases_without_errors(session):
 async def test_sync_tolerates_unknown_fields(session):
     """The mock data already includes assorted unknown keys; make sure they
     round-trip into raw_payload without breaking the pipeline."""
-    until = datetime.now(timezone.utc)
+    until = datetime.now(UTC)
     since = until - timedelta(hours=1)
 
     sync_log = await run_sync(session, since=since, until=until)

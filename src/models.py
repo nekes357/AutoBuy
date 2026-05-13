@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import JSON, DateTime, Integer, String, Text, UniqueConstraint
@@ -10,7 +10,7 @@ from src.db import Base
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class OAuthToken(Base):
@@ -22,7 +22,9 @@ class OAuthToken(Base):
     access_token: Mapped[str] = mapped_column(Text)
     refresh_token: Mapped[str | None] = mapped_column(Text, nullable=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
 
 
 class JdOrder(Base):
@@ -32,7 +34,9 @@ class JdOrder(Base):
     status: Mapped[str] = mapped_column(String(32), index=True, default="fetched")
     raw_payload: Mapped[dict[str, Any]] = mapped_column(JSON)
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
 
     # Convenience columns extracted from payload (best-effort, may be NULL until mapper fills them).
     recipient_name: Mapped[str | None] = mapped_column(String(255), nullable=True)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -27,7 +27,7 @@ async def sync_run(
     session: Session = Depends(db_session),
     settings: Settings = Depends(settings_dep),
 ) -> dict[str, Any]:
-    until = until or datetime.now(timezone.utc)
+    until = until or datetime.now(UTC)
     since = since or (until - timedelta(minutes=settings.sync_lookback_minutes))
     sync_log = await run_sync(session, since=since, until=until, settings=settings)
     return {

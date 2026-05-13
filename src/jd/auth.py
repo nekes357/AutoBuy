@@ -6,7 +6,7 @@ class is structured so only `_request_new_token` needs to change.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import structlog
@@ -42,7 +42,7 @@ class JdAuth:
             select(OAuthToken).where(OAuthToken.provider == self.PROVIDER)
         ).scalar_one_or_none()
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if cached and cached.expires_at - EXPIRY_GUARD > now:
             return cached.access_token
 
@@ -69,7 +69,10 @@ class JdAuth:
         """
         s = self._settings
         if not (s.jd_app_key and s.jd_app_secret and s.jd_username and s.jd_password):
-            raise JdAuthError("JD credentials are not configured (set JD_APP_KEY/SECRET/USERNAME/PASSWORD).")
+            raise JdAuthError(
+                "JD credentials are not configured "
+                "(set JD_APP_KEY/SECRET/USERNAME/PASSWORD)."
+            )
 
         resp = await self._http.post(
             f"{s.jd_base_url}{methods.GET_ACCESS_TOKEN}",
@@ -86,8 +89,9 @@ class JdAuth:
 
         # Tolerate either {"data":{"accessToken":..., "expiresIn":...}} or flat shape.
         data = body.get("data") if isinstance(body, dict) else None
-        token = (data or body or {}).get("accessToken") or (data or body or {}).get("access_token")
-        ttl = (data or body or {}).get("expiresIn") or (data or body or {}).get("expires_in") or 86400
+        payload = data or body or {}
+        token = payload.get("accessToken") or payload.get("access_token")
+        ttl = payload.get("expiresIn") or payload.get("expires_in") or 86400
 
         if not token:
             raise JdAuthError(f"JD token response missing accessToken: {body!r}")

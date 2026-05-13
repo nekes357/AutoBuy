@@ -14,7 +14,10 @@ import pytest
 
 from src.sync import _summarize
 
-SAMPLE = Path(__file__).resolve().parents[1] / "src" / "jd" / "sample_data" / "jd_order_details.json"
+SAMPLE = (
+    Path(__file__).resolve().parents[1]
+    / "src" / "jd" / "sample_data" / "jd_order_details.json"
+)
 ALL_ORDERS = json.loads(SAMPLE.read_text(encoding="utf-8"))
 
 
@@ -76,7 +79,12 @@ def test_summarize_handles_flat_envelope_without_result_key():
 def test_summarize_handles_completely_empty_envelope():
     """Garbage in, sensible None out — no crash."""
     summary = _summarize({}, correlation_id="test")
-    assert summary == {"recipient_name": None, "recipient_phone": None, "total_cny": None, "total_rub": None}
+    assert summary == {
+        "recipient_name": None,
+        "recipient_phone": None,
+        "total_cny": None,
+        "total_rub": None,
+    }
 
 
 def test_summarize_handles_non_dict_envelope():

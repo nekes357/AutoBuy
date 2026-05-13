@@ -7,7 +7,7 @@ CDEK push is intentionally out of scope on this iteration.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -89,7 +89,11 @@ async def run_sync(
 ) -> SyncLog:
     settings = settings or get_settings()
     correlation_id = uuid.uuid4().hex
-    bound = log.bind(correlation_id=correlation_id, since=since.isoformat(), until=until.isoformat())
+    bound = log.bind(
+        correlation_id=correlation_id,
+        since=since.isoformat(),
+        until=until.isoformat(),
+    )
     bound.info("sync.start", mode=settings.jd_mode)
 
     sync_log = SyncLog(since=since, until=until, correlation_id=correlation_id)
@@ -148,7 +152,7 @@ async def run_sync(
     sync_log.new_count = new_count
     sync_log.error_count = len(errors)
     sync_log.errors = errors or None
-    sync_log.finished_at = datetime.now(timezone.utc)
+    sync_log.finished_at = datetime.now(UTC)
     session.commit()
 
     bound.info("sync.done", fetched=fetched, new=new_count, errors=len(errors))

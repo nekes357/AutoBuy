@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
+from datetime import UTC
 
 import structlog
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -22,17 +23,19 @@ def _configure_logging(level: str) -> None:
             structlog.processors.TimeStamper(fmt="iso"),
             structlog.processors.JSONRenderer(),
         ],
-        wrapper_class=structlog.make_filtering_bound_logger(getattr(logging, level.upper(), logging.INFO)),
+        wrapper_class=structlog.make_filtering_bound_logger(
+            getattr(logging, level.upper(), logging.INFO)
+        ),
     )
 
 
 async def _scheduled_sync() -> None:
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     from src.sync import run_sync
 
     settings = get_settings()
-    until = datetime.now(timezone.utc)
+    until = datetime.now(UTC)
     since = until - timedelta(minutes=settings.sync_lookback_minutes)
     with get_session_factory()() as session:
         await run_sync(session, since=since, until=until, settings=settings)
@@ -51,7 +54,9 @@ async def lifespan(app: FastAPI):
         scheduler = AsyncIOScheduler(timezone="UTC")
         scheduler.add_job(_scheduled_sync, IntervalTrigger(minutes=settings.sync_interval_minutes))
         scheduler.start()
-        structlog.get_logger(__name__).info("scheduler.started", interval=settings.sync_interval_minutes)
+        structlog.get_logger(__name__).info(
+            "scheduler.started", interval=settings.sync_interval_minutes
+        )
 
     yield
 

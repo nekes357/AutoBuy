@@ -17,10 +17,10 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import inspect
 
+from alembic import command
 from src.db import get_engine
 
 log = logging.getLogger("autobuy.migrate")
