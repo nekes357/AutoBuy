@@ -33,6 +33,12 @@ class Settings(BaseSettings):
 
     sync_interval_minutes: int | None = Field(default=None)
     sync_lookback_minutes: int = 60
+    # How many JD order-detail requests are in flight at once.
+    # Network latency to JD (RU<->CN) is ~150-250ms per request, so
+    # a sequential loop tops out around 4-5 orders/sec. With sync_concurrency=10
+    # the practical throughput rises to ~30-50/sec, which is enough headroom
+    # for any realistic JD page (default page_size=100).
+    sync_concurrency: int = 10
 
     @field_validator("sync_interval_minutes", mode="before")
     @classmethod

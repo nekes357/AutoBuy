@@ -6,6 +6,7 @@ CDEK push is intentionally out of scope on this iteration.
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -105,6 +106,15 @@ async def run_sync(
     fetched = 0
     new_count = 0
     MAX_PAGES = 100  # safety cap; JD won't realistically return this many pages per window
+    sem = asyncio.Semaphore(max(1, settings.sync_concurrency))
+
+    async def _fetch_one(jd_id: str) -> tuple[str, dict[str, Any] | None, Exception | None]:
+        async with sem:
+            try:
+                detail = await client.get_order_detail(session, jd_id)
+                return jd_id, detail, None
+            except Exception as exc:  # noqa: BLE001
+                return jd_id, None, exc
 
     try:
         page = 1
@@ -115,12 +125,19 @@ async def run_sync(
             if not order_ids:
                 break
 
-            for jd_id in order_ids:
-                fetched += 1
-                try:
-                    detail = await client.get_order_detail(session, jd_id)
-                    summary = _summarize(detail, correlation_id)
+            # Fetch order details concurrently (network-bound). DB writes below
+            # stay sequential because SQLAlchemy's Session is not async-safe to
+            # share across tasks.
+            results = await asyncio.gather(*(_fetch_one(jd_id) for jd_id in order_ids))
 
+            for jd_id, detail, exc in results:
+                fetched += 1
+                if exc is not None or detail is None:
+                    bound.error("sync.order_failed", jd_order_id=jd_id, error=str(exc))
+                    errors.append({"jd_order_id": jd_id, "error": str(exc)})
+                    continue
+                try:
+                    summary = _summarize(detail, correlation_id)
                     existing = session.execute(
                         select(JdOrder).where(JdOrder.jd_order_id == jd_id)
                     ).scalar_one_or_none()
@@ -139,7 +156,7 @@ async def run_sync(
                             setattr(existing, k, v)
                     session.commit()
                 except Exception as exc:  # noqa: BLE001
-                    bound.exception("sync.order_failed", jd_order_id=jd_id)
+                    bound.exception("sync.persist_failed", jd_order_id=jd_id)
                     errors.append({"jd_order_id": jd_id, "error": str(exc)})
                     session.rollback()
 
