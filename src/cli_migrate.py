@@ -23,7 +23,7 @@ from sqlalchemy import inspect
 from alembic import command
 from src.db import get_engine
 
-log = logging.getLogger("autobuy.migrate")
+log = logging.getLogger("feedbridge.migrate")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 
 ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"

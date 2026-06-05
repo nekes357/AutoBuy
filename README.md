@@ -1,6 +1,6 @@
-# AutoBuy — JD VOP connector
+# FeedBridge — JD + Tmall → СДЭК
 
-Сервис-посредник: забирает заказы из **JD VOP** (vop.jd.com), сохраняет их у себя в БД, отдаёт через REST. Интеграция со СДЭК на этой итерации не реализуется — будет добавлена отдельным шагом.
+Сервис-посредник: забирает товары и заказы из **JD VOP** (vop.jd.com) и **Tmall** (taoworld.com), хранит в БД, отдаёт СДЭК через REST-фид.
 
 Стек: Python 3.12, FastAPI, httpx, Pydantic v2, SQLAlchemy 2.0, SQLite (dev) / PostgreSQL (prod), APScheduler.
 
@@ -78,11 +78,11 @@ pytest -q
 Краткий summary:
 
 1. Заказать VPS в Reg.ru (1 vCPU / 1 GB / Ubuntu 22.04, ~300 ₽/мес).
-2. В DNS Reg.ru — A-запись `autobuy.example.com → IP VPS`.
+2. В DNS Reg.ru — A-запись `feedbridge.example.com → IP VPS`.
 3. На сервере поставить Docker, склонировать репозиторий, заполнить `.env`,
    подставить домен в `Caddyfile`, запустить `docker compose up -d --build`.
-4. Проверить `curl https://autobuy.example.com/health`.
-5. Зарегистрировать `JD_CALLBACK_URL = https://autobuy.example.com/jd/callback`
+4. Проверить `curl https://feedbridge.example.com/health`.
+5. Зарегистрировать `JD_CALLBACK_URL = https://feedbridge.example.com/jd/callback`
    в кабинете JD VOP, получить ключи, переключить `JD_MODE=live` в `.env`,
    `docker compose restart app`.
 

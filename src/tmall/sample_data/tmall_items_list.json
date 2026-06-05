@@ -1,0 +1,42 @@
+{
+  "items_list_get_response": {
+    "item": [
+      {
+        "num_iid": 123456789,
+        "title": "Xiaomi Redmi Note 13 6GB+128GB Смартфон",
+        "price": "1299.00",
+        "pic_url": "https://img.alicdn.com/imgextra/i1/123456789/O1CN01sample.jpg",
+        "detail_url": "https://item.taobao.com/item.htm?id=123456789",
+        "num": 120,
+        "cid": 50010864,
+        "props_name": "20000:颜色分类;黑色:Черный",
+        "modified": "2026-05-22 08:00:00",
+        "skus": {"sku": [{"sku_id": "5000000001", "quantity": 120, "price": "1299.00"}]},
+        "item_imgs": {"item_img": [{"url": "https://img.alicdn.com/sample1.jpg"}]}
+      },
+      {
+        "num_iid": 987654321,
+        "title": "Беспроводные наушники TWS с шумоподавлением",
+        "price": "299.00",
+        "pic_url": "https://img.alicdn.com/imgextra/i2/987654321/O1CN01sample.jpg",
+        "detail_url": "https://item.taobao.com/item.htm?id=987654321",
+        "num": 500,
+        "cid": 50010867,
+        "props_name": "20000:颜色分类;白色:Белый",
+        "modified": "2026-05-22 07:30:00",
+        "skus": {
+          "sku": [
+            {"sku_id": "6000000001", "quantity": 300, "price": "299.00"},
+            {"sku_id": "6000000002", "quantity": 200, "price": "299.00"}
+          ]
+        },
+        "item_imgs": {
+          "item_img": [
+            {"url": "https://img.alicdn.com/sample2_1.jpg"},
+            {"url": "https://img.alicdn.com/sample2_2.jpg"}
+          ]
+        }
+      }
+    ]
+  }
+}

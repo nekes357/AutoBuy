@@ -1,0 +1,38 @@
+{
+  "item_get_response": {
+    "item": {
+      "num_iid": 123456789,
+      "title": "Xiaomi Redmi Note 13 6GB+128GB Смартфон",
+      "price": "1299.00",
+      "pic_url": "https://img.alicdn.com/imgextra/i1/123456789/O1CN01sample.jpg",
+      "detail_url": "https://item.taobao.com/item.htm?id=123456789",
+      "num": 120,
+      "cid": 50010864,
+      "props_name": "20000:颜色分类;黑色:Черный",
+      "modified": "2026-05-22 08:00:00",
+      "skus": {
+        "sku": [
+          {
+            "sku_id": "5000000001",
+            "properties": "1627207:28320",
+            "quantity": 60,
+            "price": "1299.00"
+          },
+          {
+            "sku_id": "5000000002",
+            "properties": "1627207:28319",
+            "quantity": 60,
+            "price": "1299.00"
+          }
+        ]
+      },
+      "item_imgs": {
+        "item_img": [
+          {"url": "https://img.alicdn.com/imgextra/i1/123456789/O1CN01sample_1.jpg"},
+          {"url": "https://img.alicdn.com/imgextra/i2/123456789/O1CN01sample_2.jpg"},
+          {"url": "https://img.alicdn.com/imgextra/i3/123456789/O1CN01sample_3.jpg"}
+        ]
+      }
+    }
+  }
+}

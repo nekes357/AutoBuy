@@ -1,12 +1,12 @@
 services:
   app:
     build: .
-    image: autobuy:latest
+    image: feedbridge:latest
     env_file: .env
     environment:
       # Force Postgres in docker-compose; overrides DATABASE_URL from .env
       # so an accidental sqlite URL in .env won't silently lose data on rebuild.
-      DATABASE_URL: postgresql+psycopg://autobuy:autobuy@db:5432/autobuy
+      DATABASE_URL: postgresql+psycopg://feedbridge:feedbridge@db:5432/feedbridge
     expose:
       - "8000"
     depends_on:
@@ -17,13 +17,13 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: autobuy
-      POSTGRES_PASSWORD: autobuy
-      POSTGRES_DB: autobuy
+      POSTGRES_USER: feedbridge
+      POSTGRES_PASSWORD: feedbridge
+      POSTGRES_DB: feedbridge
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U autobuy"]
+      test: ["CMD-SHELL", "pg_isready -U feedbridge"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -40,9 +40,9 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_HOST: db
-      POSTGRES_DB: autobuy
-      POSTGRES_USER: autobuy
-      POSTGRES_PASSWORD: autobuy
+      POSTGRES_DB: feedbridge
+      POSTGRES_USER: feedbridge
+      POSTGRES_PASSWORD: feedbridge
       POSTGRES_EXTRA_OPTS: "-Z 6"
       SCHEDULE: "@daily"
       BACKUP_KEEP_DAYS: "14"

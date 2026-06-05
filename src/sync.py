@@ -22,6 +22,7 @@ from src.jd.auth import JdAuth
 from src.jd.client import JdClient
 from src.jd.mock import MockJdClient
 from src.models import JdOrder, SyncLog
+from src.notify import _fmt_sync_result, send as tg_send
 
 log = structlog.get_logger(__name__)
 
@@ -173,4 +174,13 @@ async def run_sync(
     session.commit()
 
     bound.info("sync.done", fetched=fetched, new=new_count, errors=len(errors))
+
+    has_errors = len(errors) > 0
+    if has_errors or settings.telegram_notify_success:
+        await tg_send(
+            _fmt_sync_result("JD", fetched, new_count, len(errors)),
+            token=settings.telegram_bot_token,
+            chat_id=settings.telegram_chat_id,
+        )
+
     return sync_log

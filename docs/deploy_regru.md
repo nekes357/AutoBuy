@@ -1,6 +1,6 @@
-# Развёртывание AutoBuy на Reg.ru VPS
+# Развёртывание FeedBridge на Reg.ru VPS
 
-Цель: получить публичный HTTPS-URL вида `https://autobuy.example.com/jd/callback`,
+Цель: получить публичный HTTPS-URL вида `https://feedbridge.example.com/jd/callback`,
 который можно зарегистрировать в кабинете JD VOP для выдачи production-ключей.
 До получения JD-кредов сервис работает в `JD_MODE=mock` и обслуживает
 `/health` + всё API на фикстурах — этого достаточно для проверки HTTPS и
@@ -37,12 +37,12 @@
 
 | Тип | Имя | Значение | TTL |
 |---|---|---|---|
-| A | `autobuy` (или `@` если корневой) | IP вашего VPS | 600 |
+| A | `feedbridge` (или `@` если корневой) | IP вашего VPS | 600 |
 
 Проверить применение DNS (займёт от 5 минут до часа):
 
 ```bash
-dig +short autobuy.example.com
+dig +short feedbridge.example.com
 # должен вернуть IP вашего VPS
 ```
 
@@ -84,8 +84,8 @@ docker compose version
 ```bash
 # 4.1. Клонировать репозиторий
 mkdir -p /opt && cd /opt
-git clone https://github.com/nekes357/AutoBuy.git autobuy
-cd autobuy
+git clone https://github.com/dmtrpvl-sys/cdek.git feedbridge
+cd feedbridge/connector
 git checkout claude/jd-vop-cdek-connector-c4lMq
 
 # 4.2. Настроить .env
@@ -98,15 +98,15 @@ nano .env
 ```bash
 SERVICE_API_KEY=<сгенерируйте: openssl rand -hex 32>
 JD_MODE=mock                    # пока ключей JD нет — оставляем mock
-JD_CALLBACK_URL=https://autobuy.example.com/jd/callback
+JD_CALLBACK_URL=https://feedbridge.example.com/jd/callback
 CNY_RUB_RATE=12.50              # текущий курс CNY→RUB, правится вручную
 ```
 
-`DATABASE_URL` в `.env` менять **не нужно** — `docker-compose.yml` сам подставит `postgresql+psycopg://autobuy:autobuy@db:5432/autobuy`.
+`DATABASE_URL` в `.env` менять **не нужно** — `docker-compose.yml` сам подставит `postgresql+psycopg://feedbridge:feedbridge@db:5432/feedbridge`.
 
 ```bash
 # 4.3. Подставить домен в Caddyfile
-sed -i 's/autobuy.example.com/<ваш-домен>/' Caddyfile
+sed -i 's/feedbridge.example.com/<ваш-домен>/' Caddyfile
 
 # 4.4. Запустить
 docker compose up -d --build
@@ -124,15 +124,15 @@ curl -fsS http://localhost:8000/health
 # {"status":"ok"}
 
 # 5.2. Снаружи через Caddy (HTTPS)
-curl -fsS https://autobuy.example.com/health
+curl -fsS https://feedbridge.example.com/health
 # {"status":"ok"}
 
 # 5.3. Mock-pull работает
-curl -X POST https://autobuy.example.com/sync/run \
+curl -X POST https://feedbridge.example.com/sync/run \
     -H "x-api-key: <SERVICE_API_KEY из .env>"
 # {"id":1,"correlation_id":"...","fetched":2,"new":2,"errors":0,...}
 
-curl https://autobuy.example.com/orders \
+curl https://feedbridge.example.com/orders \
     -H "x-api-key: <SERVICE_API_KEY>"
 # [{"jd_order_id":"100000000001",...}]
 ```
@@ -152,11 +152,11 @@ ufw status                  # должны быть открыты 80 и 443
 
 1. Создать приложение.
 2. В поле «Whitelisted callback URL» / «Redirect URI» / «Callback URL» вписать:
-   `https://autobuy.example.com/jd/callback`
+   `https://feedbridge.example.com/jd/callback`
 3. JD выдаст: `app_key`, `app_secret`, корпоративный `username`/`password`.
 4. На VPS:
    ```bash
-   cd /opt/autobuy
+   cd /opt/feedbridge/connector
    nano .env
    # выставить: JD_MODE=live, JD_APP_KEY, JD_APP_SECRET, JD_USERNAME, JD_PASSWORD
    docker compose restart app
@@ -164,7 +164,7 @@ ufw status                  # должны быть открыты 80 и 443
    ```
 5. Первый ручной pull:
    ```bash
-   curl -X POST "https://autobuy.example.com/sync/run?since=2026-05-01T00:00:00Z&until=2026-05-05T00:00:00Z" \
+   curl -X POST "https://feedbridge.example.com/sync/run?since=2026-05-01T00:00:00Z&until=2026-05-05T00:00:00Z" \
        -H "x-api-key: <SERVICE_API_KEY>"
    ```
    Если поля JD-ответа разойдутся с нашими ожиданиями (5 TBD из `docs/api_research.md`) — ошибки будут видны в `docker compose logs app` и правятся точечно.
@@ -178,7 +178,7 @@ ufw status                  # должны быть открыты 80 и 443
 | Обновить курс CNY→RUB | `nano .env` → правка `CNY_RUB_RATE` → `docker compose up -d --force-recreate app` |
 | Посмотреть последние sync'и | `curl https://.../sync/logs -H "x-api-key: ..."` |
 | Ручной бэкап БД (немедленно) | `docker compose exec backup /backup.sh` |
-| Список доступных бэкапов | `ls -lh /opt/autobuy/backups/{last,daily,weekly,monthly}/ 2>/dev/null` |
+| Список доступных бэкапов | `ls -lh /opt/feedbridge/backups/{last,daily,weekly,monthly}/ 2>/dev/null` |
 | Восстановление из бэкапа | см. раздел «Бэкапы и восстановление» ниже |
 | Обновить код | `git pull && docker compose up -d --build` (миграции БД применятся автоматически в entrypoint'е) |
 | Включить периодический pull | в `.env` выставить `SYNC_INTERVAL_MINUTES=15` → `docker compose up -d --force-recreate app` |
@@ -188,7 +188,7 @@ ufw status                  # должны быть открыты 80 и 443
 ### Бэкапы и восстановление
 
 В docker-compose работает отдельный контейнер `backup` (`prodrigestivill/postgres-backup-local`),
-который делает `pg_dump` БД `autobuy` **раз в сутки** в `./backups` на хосте, по часовому
+который делает `pg_dump` БД `feedbridge` **раз в сутки** в `./backups` на хосте, по часовому
 поясу `Europe/Moscow`. Бэкапы сжаты gzip (`-Z 6`).
 
 Структура:
@@ -211,14 +211,14 @@ ls -lh backups/last/
 **Восстановление из конкретного дампа** (приведёт к потере данных, появившихся после
 бэкапа — делать только осознанно):
 ```bash
-cd /opt/autobuy
+cd /opt/feedbridge/connector
 
 # Остановить app, чтобы он не писал во время restore
 docker compose stop app
 
 # Скопировать дамп в контейнер БД и накатить
-gunzip -c backups/daily/autobuy-2026-05-12T03-00-00.sql.gz \
-    | docker compose exec -T db psql -U autobuy -d autobuy
+gunzip -c backups/daily/feedbridge-2026-05-12T03-00-00.sql.gz \
+    | docker compose exec -T db psql -U feedbridge -d feedbridge
 
 # Запустить app обратно
 docker compose start app
@@ -226,7 +226,7 @@ docker compose start app
 
 **Скачать бэкап на свой Mac** (для оффлайн-копии):
 ```bash
-scp root@194.67.116.211:/opt/autobuy/backups/last/autobuy-latest.sql.gz ./
+scp root@194.67.116.211:/opt/feedbridge/backups/last/feedbridge-latest.sql.gz ./
 ```
 
 В долгосроке стоит дополнительно синхронизировать `./backups` на внешнее хранилище
@@ -252,7 +252,7 @@ git push
 
 На сервере:
 ```bash
-cd /opt/autobuy
+cd /opt/feedbridge/connector
 git pull
 docker compose up -d --build app
 # entrypoint сам выполнит alembic upgrade head перед стартом uvicorn

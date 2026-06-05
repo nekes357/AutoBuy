@@ -12,6 +12,7 @@ from fastapi import FastAPI
 from src.api.routes import router
 from src.config import get_settings
 from src.db import get_session_factory
+from src.notify import send as tg_send
 
 
 def _configure_logging(level: str) -> None:
@@ -29,7 +30,7 @@ def _configure_logging(level: str) -> None:
     )
 
 
-async def _scheduled_sync() -> None:
+async def _scheduled_jd_sync() -> None:
     from datetime import datetime, timedelta
 
     from src.sync import run_sync
@@ -41,6 +42,14 @@ async def _scheduled_sync() -> None:
         await run_sync(session, since=since, until=until, settings=settings)
 
 
+async def _scheduled_tmall_sync() -> None:
+    from src.sync_tmall import run_watchlist_sync
+
+    settings = get_settings()
+    with get_session_factory()() as session:
+        await run_watchlist_sync(session, settings=settings)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
@@ -50,13 +59,32 @@ async def lifespan(app: FastAPI):
     # directly via src.db.init_db().
 
     scheduler: AsyncIOScheduler | None = None
-    if settings.sync_interval_minutes:
+    if settings.sync_interval_minutes or settings.tmall_sync_interval_minutes:
         scheduler = AsyncIOScheduler(timezone="UTC")
-        scheduler.add_job(_scheduled_sync, IntervalTrigger(minutes=settings.sync_interval_minutes))
+        if settings.sync_interval_minutes:
+            scheduler.add_job(
+                _scheduled_jd_sync,
+                IntervalTrigger(minutes=settings.sync_interval_minutes),
+                id="jd_sync",
+            )
+        if settings.tmall_sync_interval_minutes:
+            scheduler.add_job(
+                _scheduled_tmall_sync,
+                IntervalTrigger(minutes=settings.tmall_sync_interval_minutes),
+                id="tmall_sync",
+            )
         scheduler.start()
         structlog.get_logger(__name__).info(
-            "scheduler.started", interval=settings.sync_interval_minutes
+            "scheduler.started",
+            jd_interval=settings.sync_interval_minutes,
+            tmall_interval=settings.tmall_sync_interval_minutes,
         )
+
+    await tg_send(
+        "[FeedBridge] Сервис запущен",
+        token=settings.telegram_bot_token,
+        chat_id=settings.telegram_chat_id,
+    )
 
     yield
 
@@ -64,5 +92,5 @@ async def lifespan(app: FastAPI):
         scheduler.shutdown(wait=False)
 
 
-app = FastAPI(title="AutoBuy — JD VOP connector", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="FeedBridge — JD + Tmall → СДЭК", version="0.1.0", lifespan=lifespan)
 app.include_router(router)

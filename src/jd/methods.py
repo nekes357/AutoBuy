@@ -21,3 +21,9 @@ CHECK_COMPLETE_ORDER = "/api/checkOrder/checkCompleteOrder"
 SELECT_JD_ORDER = "/api/order/selectJdOrder"
 SELECT_JD_ORDER_BY_THIRD = "/api/order/selectJdOrderIdByThirdOrder"
 ORDER_TRACK = "/api/order/orderTrack"
+
+# Product catalog (TBD: exact paths to confirm in VOP cabinet when credentials arrive).
+# Based on zmq3821/jd_biz and common VOP conventions.
+GET_PRODUCT_LIST = "/api/product/getProductList"       # TBD
+GET_SKU_DETAIL = "/api/product/skuDetail"              # TBD
+GET_SKU_BY_IDS = "/api/product/getSkuByIds"            # TBD

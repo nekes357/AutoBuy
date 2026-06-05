@@ -1,5 +1,5 @@
 [project]
-name = "autobuy"
+name = "feedbridge"
 version = "0.1.0"
 description = "JD VOP -> internal store connector. Pulls orders from JD VOP and persists them; CDEK leg is out of scope on this iteration."
 requires-python = ">=3.12"

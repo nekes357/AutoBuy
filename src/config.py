@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     service_api_key: str = "change-me"
 
-    database_url: str = "sqlite+pysqlite:///./autobuy.db"
+    database_url: str = "sqlite+pysqlite:///./feedbridge.db"
 
     jd_mode: Literal["mock", "live"] = "mock"
     jd_base_url: str = "https://bizapi.jd.com"
@@ -39,6 +39,21 @@ class Settings(BaseSettings):
     # the practical throughput rises to ~30-50/sec, which is enough headroom
     # for any realistic JD page (default page_size=100).
     sync_concurrency: int = 10
+
+    # --- Tmall / Taobao Open Platform (taoworld.com) ---
+    tmall_mode: Literal["mock", "live"] = "mock"
+    tmall_app_key: str = ""
+    tmall_app_secret: str = ""
+    # How many item IDs to fetch in one taobao.items.list.get call (max 40).
+    tmall_batch_size: int = 40
+    # Interval for scheduled catalog refresh (None = manual /feed/sync only).
+    tmall_sync_interval_minutes: int | None = Field(default=None)
+
+    # --- Telegram notifications ---
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+    # Set to False to suppress successful-sync messages (errors always sent).
+    telegram_notify_success: bool = True
 
     @field_validator("sync_interval_minutes", mode="before")
     @classmethod
