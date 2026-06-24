@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     # Set to False to suppress successful-sync messages (errors always sent).
     telegram_notify_success: bool = True
 
-    @field_validator("sync_interval_minutes", mode="before")
+    @field_validator("sync_interval_minutes", "tmall_sync_interval_minutes", mode="before")
     @classmethod
     def _empty_str_as_none(cls, v: object) -> object:
         if isinstance(v, str) and v.strip() == "":
