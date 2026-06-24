@@ -10,15 +10,20 @@ import pytest
 from src.jd_union.catalog_check import (
     check_products,
     extract_sku_id,
+    load_check_from_db,
     load_product_bytes,
     parse_rows,
     report_to_csv,
 )
+from src.models import JdUnionCatalogCheck, JdUnionCatalogCheckRow
 
 # SKUs 100012345001/002/003 exist in union_goods_query.json (the mock pool);
 # 999... does not, so it exercises the not-found path.
-SKU_PRESENT_1 = "100012345001"
-SKU_PRESENT_2 = "100012345002"
+# 001 is in stock, 002 is out of stock, 003 has no stockInfo (unknown).
+SKU_IN_STOCK = "100012345001"
+SKU_OUT_OF_STOCK = "100012345002"
+SKU_PRESENT_1 = SKU_IN_STOCK
+SKU_PRESENT_2 = SKU_OUT_OF_STOCK
 SKU_MISSING = "100099999999"
 
 
@@ -101,8 +106,77 @@ async def test_check_products_found_and_missing():
     assert by_sku[SKU_PRESENT_1].price_cny == 389.0
     assert by_sku[SKU_PRESENT_1].price_rub == round(389.0 * 12.5, 2)
     assert by_sku[SKU_PRESENT_1].commission == 15.56
+    assert by_sku[SKU_PRESENT_1].in_stock is True
+    assert by_sku[SKU_PRESENT_1].stock_num == 158
+    assert by_sku[SKU_PRESENT_2].in_stock is False
     assert by_sku[SKU_MISSING].found is False
     assert by_sku[SKU_MISSING].price_cny is None
+    assert by_sku[SKU_MISSING].in_stock is None
+
+
+@pytest.mark.asyncio
+async def test_check_products_unknown_stock_stays_none():
+    """When JD doesn't return stockInfo at all, in_stock must be None
+    (not False) so callers can distinguish "unknown" from "out of stock"."""
+    raw = [
+        ("product_id", "name", "active_url"),
+        # Fixture order 003 has no stockInfo block.
+        (1, "Unknown stock", "https://item.jd.com/100012345003.html"),
+    ]
+    report = await check_products(parse_rows(raw))
+    assert report.results[0].found is True
+    assert report.results[0].in_stock is None
+    assert report.results[0].stock_num is None
+
+
+@pytest.mark.asyncio
+async def test_check_products_persists_to_db(session):
+    """With session=, the run + per-row results land in the DB and can
+    be replayed via load_check_from_db()."""
+    raw = [
+        ("product_id", "name", "active_url"),
+        (1, "Present 1", f"https://item.jd.com/{SKU_PRESENT_1}.html"),
+        (2, "Missing", f"https://item.jd.com/{SKU_MISSING}.html"),
+        (3, "No url", ""),
+    ]
+    report = await check_products(
+        parse_rows(raw), session=session, source_filename="JD.xlsx"
+    )
+
+    # Header row persisted with the right counts.
+    assert report.check_id is not None
+    check = session.get(JdUnionCatalogCheck, report.check_id)
+    assert check is not None
+    assert check.source_filename == "JD.xlsx"
+    assert check.total == 3
+    assert check.found == 1
+    assert check.not_found == 1
+    assert check.no_sku == 1
+    assert check.finished_at is not None
+
+    # Per-row results persisted, one row per input row.
+    db_rows = (
+        session.query(JdUnionCatalogCheckRow)
+        .filter(JdUnionCatalogCheckRow.check_id == check.id)
+        .order_by(JdUnionCatalogCheckRow.id)
+        .all()
+    )
+    assert len(db_rows) == 3
+    assert db_rows[0].found is True
+    assert db_rows[0].in_stock is True
+    assert db_rows[1].found is False
+    assert db_rows[2].sku_id is None
+
+    # Replay round-trips.
+    replayed = load_check_from_db(session, check.id)
+    assert replayed is not None
+    assert replayed.summary()["total"] == 3
+    assert replayed.summary()["found"] == 1
+    assert [r.product_id for r in replayed.results] == ["1", "2", "3"]
+
+
+def test_load_check_from_db_returns_none_for_missing(session):
+    assert load_check_from_db(session, 9999) is None
 
 
 def test_extract_sku_id_tolerates_htm_and_query():

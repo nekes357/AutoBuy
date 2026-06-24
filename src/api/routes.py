@@ -12,10 +12,18 @@ from src.api.deps import db_session, require_api_key, settings_dep
 from src.config import Settings
 from src.jd_union.catalog_check import (
     check_products,
+    load_check_from_db,
     load_product_bytes,
     report_to_csv,
 )
-from src.models import CatalogWatchlistEntry, JdOrder, JdUnionProduct, SyncLog, TmallItem
+from src.models import (
+    CatalogWatchlistEntry,
+    JdOrder,
+    JdUnionCatalogCheck,
+    JdUnionProduct,
+    SyncLog,
+    TmallItem,
+)
 from src.sync import run_sync
 from src.sync_tmall import run_tmall_sync
 from src.sync_union import run_union_sync
@@ -408,12 +416,13 @@ async def union_sync(
 async def union_check(
     file: UploadFile = File(...),
     format: str = Query(default="json", pattern="^(json|csv)$"),
+    session: Session = Depends(db_session),
     settings: Settings = Depends(settings_dep),
 ):
     """Check a product catalog file (xlsx/csv) against JD Union.
 
-    The file's JD SKU is read from item.jd.com/<sku>.html URLs. Returns a
-    summary + per-row report. Pass ?format=csv to download the report as CSV.
+    Persists the run and per-row results to the DB so it can be re-fetched via
+    GET /union/checks/{id}. Pass ?format=csv to download the report as CSV.
     """
     data = await file.read()
     try:
@@ -421,13 +430,68 @@ async def union_check(
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=400, detail=f"could not parse file: {exc}") from exc
 
-    report = await check_products(rows, settings=settings)
+    report = await check_products(
+        rows,
+        session=session,
+        settings=settings,
+        source_filename=file.filename,
+    )
 
     if format == "csv":
         return PlainTextResponse(
             report_to_csv(report),
             media_type="text/csv",
             headers={"Content-Disposition": "attachment; filename=union_check.csv"},
+        )
+    return {"summary": report.summary(), "results": [r.as_dict() for r in report.results]}
+
+
+@router.get("/union/checks", dependencies=[Depends(require_api_key)])
+def union_check_list(
+    limit: int = 50, session: Session = Depends(db_session)
+) -> list[dict[str, Any]]:
+    rows = (
+        session.execute(
+            select(JdUnionCatalogCheck)
+            .order_by(desc(JdUnionCatalogCheck.id))
+            .limit(limit)
+        )
+        .scalars()
+        .all()
+    )
+    return [
+        {
+            "id": r.id,
+            "source_filename": r.source_filename,
+            "started_at": r.started_at.isoformat() if r.started_at else None,
+            "finished_at": r.finished_at.isoformat() if r.finished_at else None,
+            "total": r.total,
+            "with_sku": r.with_sku,
+            "found": r.found,
+            "not_found": r.not_found,
+            "no_sku": r.no_sku,
+        }
+        for r in rows
+    ]
+
+
+@router.get("/union/checks/{check_id}", dependencies=[Depends(require_api_key)])
+def union_check_detail(
+    check_id: int,
+    format: str = Query(default="json", pattern="^(json|csv)$"),
+    session: Session = Depends(db_session),
+):
+    """Replay a stored check: summary + per-row results, optionally as CSV."""
+    report = load_check_from_db(session, check_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="check not found")
+    if format == "csv":
+        return PlainTextResponse(
+            report_to_csv(report),
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": f"attachment; filename=union_check_{check_id}.csv"
+            },
         )
     return {"summary": report.summary(), "results": [r.as_dict() for r in report.results]}
 

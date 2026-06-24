@@ -36,6 +36,14 @@ async def test_union_sync_search_only(session):
     # bigfield extras should be empty in summary-only mode.
     assert drill.ware_qd is None
     assert drill.wdesc is None
+    # Stock from fixture: 001 in stock, 002 out of stock, 003 unknown.
+    assert drill.in_stock is True
+    assert drill.stock_state == 33
+    assert drill.stock_num == 158
+    assert by_id["100012345002"].in_stock is False
+    assert by_id["100012345002"].stock_state == 36
+    assert by_id["100012345003"].in_stock is None
+    assert by_id["100012345003"].stock_state is None
 
 
 @pytest.mark.asyncio

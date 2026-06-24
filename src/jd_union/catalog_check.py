@@ -19,6 +19,7 @@ import csv
 import io
 import re
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +31,7 @@ from src.currency import cny_to_rub
 from src.jd_union.client import UnionClient
 from src.jd_union.mock import MockUnionClient
 from src.jd_union.schemas import UnionGoodsItem
+from src.models import JdUnionCatalogCheck, JdUnionCatalogCheckRow
 from src.sync_union import _build_client
 
 log = structlog.get_logger(__name__)
@@ -72,6 +74,8 @@ class CheckResult:
     price_rub: float | None = None
     commission: float | None = None
     commission_share: float | None = None
+    in_stock: bool | None = None     # None if JD didn't report stockInfo
+    stock_num: int | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -85,6 +89,8 @@ class CheckResult:
             "price_rub": self.price_rub,
             "commission": self.commission,
             "commission_share": self.commission_share,
+            "in_stock": self.in_stock,
+            "stock_num": self.stock_num,
         }
 
 
@@ -95,6 +101,7 @@ class CheckReport:
     found: int = 0
     not_found: int = 0
     no_sku: int = 0
+    check_id: int | None = None   # populated when results are persisted
     results: list[CheckResult] = field(default_factory=list)
 
     def summary(self) -> dict[str, Any]:
@@ -104,6 +111,7 @@ class CheckReport:
             "found": self.found,
             "not_found": self.not_found,
             "no_sku": self.no_sku,
+            "check_id": self.check_id,
         }
 
 
@@ -194,16 +202,32 @@ def _read_csv(text: str) -> list[tuple[Any, ...]]:
 async def check_products(
     rows: list[ProductRow],
     *,
-    session: Session | None = None,  # reserved: persist results later if wanted
+    session: Session | None = None,
     settings: Settings | None = None,
+    source_filename: str | None = None,
 ) -> CheckReport:
     """Query JD Union for every row that has a SKU, build a CheckReport.
 
     One report row is emitted per *input* row (duplicate SKUs are not merged),
     but each unique SKU is queried only once.
+
+    When `session` is given, the run and its per-row results are persisted to
+    jd_union_catalog_checks / jd_union_catalog_check_rows, and report.check_id
+    is set so the caller can later fetch the report back from the DB.
     """
     settings = settings or get_settings()
     report = CheckReport(total=len(rows))
+
+    # Persist the run header up front so we can attach rows to it later.
+    check: JdUnionCatalogCheck | None = None
+    if session is not None:
+        check = JdUnionCatalogCheck(
+            source_filename=source_filename,
+            total=len(rows),
+        )
+        session.add(check)
+        session.commit()
+        report.check_id = check.id
 
     # Unique SKUs to query (dedupe API calls); rows keep their own identity.
     unique_skus = {row.sku_id for row in rows if row.sku_id}
@@ -260,8 +284,36 @@ async def check_products(
                 price_rub=price_rub,
                 commission=comm.commission if comm else None,
                 commission_share=comm.commissionShare if comm else None,
+                in_stock=item.is_in_stock(),
+                stock_num=item.stock_num(),
             )
         )
+
+    if session is not None and check is not None:
+        check.with_sku = report.with_sku
+        check.found = report.found
+        check.not_found = report.not_found
+        check.no_sku = report.no_sku
+        check.finished_at = datetime.now(UTC)
+        for r in report.results:
+            session.add(
+                JdUnionCatalogCheckRow(
+                    check_id=check.id,
+                    product_id=r.product_id,
+                    name=r.name,
+                    sku_id=r.sku_id,
+                    url=r.url,
+                    found=r.found,
+                    jd_name=r.jd_name,
+                    price_cny=r.price_cny,
+                    price_rub=r.price_rub,
+                    commission=r.commission,
+                    commission_share=r.commission_share,
+                    in_stock=r.in_stock,
+                    stock_num=r.stock_num,
+                )
+            )
+        session.commit()
 
     log.info(
         "catalog_check.done",
@@ -284,10 +336,51 @@ def report_to_csv(report: CheckReport) -> str:
     buf = io.StringIO()
     cols = [
         "product_id", "name", "sku_id", "url", "found",
-        "jd_name", "price_cny", "price_rub", "commission", "commission_share",
+        "jd_name", "price_cny", "price_rub",
+        "commission", "commission_share",
+        "in_stock", "stock_num",
     ]
     writer = csv.DictWriter(buf, fieldnames=cols)
     writer.writeheader()
     for r in report.results:
         writer.writerow(r.as_dict())
     return buf.getvalue()
+
+
+def load_check_from_db(session: Session, check_id: int) -> CheckReport | None:
+    """Hydrate a CheckReport from a previously-persisted run."""
+    check = session.get(JdUnionCatalogCheck, check_id)
+    if check is None:
+        return None
+    rows = (
+        session.query(JdUnionCatalogCheckRow)
+        .filter(JdUnionCatalogCheckRow.check_id == check_id)
+        .order_by(JdUnionCatalogCheckRow.id)
+        .all()
+    )
+    report = CheckReport(
+        total=check.total,
+        with_sku=check.with_sku,
+        found=check.found,
+        not_found=check.not_found,
+        no_sku=check.no_sku,
+        check_id=check.id,
+    )
+    report.results = [
+        CheckResult(
+            product_id=r.product_id,
+            name=r.name,
+            sku_id=r.sku_id,
+            url=r.url,
+            found=r.found,
+            jd_name=r.jd_name,
+            price_cny=r.price_cny,
+            price_rub=r.price_rub,
+            commission=r.commission,
+            commission_share=r.commission_share,
+            in_stock=r.in_stock,
+            stock_num=r.stock_num,
+        )
+        for r in rows
+    ]
+    return report

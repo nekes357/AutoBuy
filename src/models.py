@@ -111,6 +111,12 @@ class JdUnionProduct(Base):
     commission_share: Mapped[float | None] = mapped_column(nullable=True)
     in_order_count_30d: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    # Stock (best-effort from goods.query.stockInfo — may be NULL when JD
+    # didn't return stockInfo, which is common for some categories).
+    in_stock: Mapped[bool | None] = mapped_column(nullable=True)
+    stock_state: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    stock_num: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
     # Big fields (only filled when bigfield.query was run).
     ware_qd: Mapped[str | None] = mapped_column(Text, nullable=True)
     wdesc: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -120,6 +126,49 @@ class JdUnionProduct(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
+
+
+class JdUnionCatalogCheck(Base):
+    """One run of POST /union/check — bulk catalog audit against JD Union.
+
+    Stores the summary so the user can list past runs and re-download a
+    report without re-running the API calls.
+    """
+
+    __tablename__ = "jd_union_catalog_checks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    total: Mapped[int] = mapped_column(Integer, default=0)
+    with_sku: Mapped[int] = mapped_column(Integer, default=0)
+    found: Mapped[int] = mapped_column(Integer, default=0)
+    not_found: Mapped[int] = mapped_column(Integer, default=0)
+    no_sku: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class JdUnionCatalogCheckRow(Base):
+    """Per-input-row result of a catalog check, joined to JdUnionCatalogCheck."""
+
+    __tablename__ = "jd_union_catalog_check_rows"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    check_id: Mapped[int] = mapped_column(Integer, index=True)
+    product_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    name: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    sku_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    url: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    found: Mapped[bool] = mapped_column(default=False)
+    jd_name: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    price_cny: Mapped[float | None] = mapped_column(nullable=True)
+    price_rub: Mapped[float | None] = mapped_column(nullable=True)
+    commission: Mapped[float | None] = mapped_column(nullable=True)
+    commission_share: Mapped[float | None] = mapped_column(nullable=True)
+    in_stock: Mapped[bool | None] = mapped_column(nullable=True)
+    stock_num: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class CatalogWatchlistEntry(Base):

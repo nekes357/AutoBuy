@@ -64,6 +64,17 @@ class UnionShopInfo(BaseModel):
     shopLevel: float | None = None
 
 
+class UnionStockInfo(BaseModel):
+    """Stock state. Not always returned by JD — some categories have it,
+    some don't, so every field is optional."""
+
+    model_config = ConfigDict(extra="allow")
+
+    stockState: int | None = None        # 33=in stock, 34=preorder, 36=out of stock (JD code)
+    stockStateName: str | None = None
+    stockNum: int | None = None          # remaining stock count
+
+
 class UnionGoodsItem(BaseModel):
     """Single goods record returned by goods.query or bigfield.query."""
 
@@ -84,10 +95,31 @@ class UnionGoodsItem(BaseModel):
     categoryInfo: UnionCategoryInfo | None = None
     commissionInfo: UnionCommissionInfo | None = None
     shopInfo: UnionShopInfo | None = None
+    stockInfo: UnionStockInfo | None = None
 
     # bigfield extras (only present when fields=wareQD,wdesc requested).
     wareQD: str | None = None
     wdesc: str | None = None
+
+    # JD codes: 33 = in stock. Anything else (34 preorder, 36 out, 39 reserved) → not available.
+    _IN_STOCK_CODE = 33
+
+    def is_in_stock(self) -> bool | None:
+        """Best-effort: True/False if we can tell, None if JD didn't return enough.
+
+        Some endpoints/categories omit stockInfo entirely — we return None then
+        so callers can distinguish "unknown" from "out of stock"."""
+        if self.stockInfo is None:
+            return None
+        state = self.stockInfo.stockState
+        if state is not None:
+            return state == self._IN_STOCK_CODE
+        if self.stockInfo.stockNum is not None:
+            return self.stockInfo.stockNum > 0
+        return None
+
+    def stock_num(self) -> int | None:
+        return self.stockInfo.stockNum if self.stockInfo else None
 
 
 class UnionResult(BaseModel):
