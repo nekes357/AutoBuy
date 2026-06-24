@@ -22,7 +22,8 @@ from src.jd.auth import JdAuth
 from src.jd.client import JdClient
 from src.jd.mock import MockJdClient
 from src.models import JdOrder, SyncLog
-from src.notify import _fmt_sync_result, send as tg_send
+from src.notify import _fmt_sync_result
+from src.notify import send as tg_send
 
 log = structlog.get_logger(__name__)
 

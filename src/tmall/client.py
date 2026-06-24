@@ -58,10 +58,14 @@ class TmallClient:
             raise TmallApiError(err.code, err.msg, body)
         return envelope
 
-    async def get_item(self, num_iid: int | str, fields: str = methods.DEFAULT_ITEM_FIELDS) -> TaobaoEnvelope:
+    async def get_item(
+        self, num_iid: int | str, fields: str = methods.DEFAULT_ITEM_FIELDS
+    ) -> TaobaoEnvelope:
         return await self._call(methods.ITEM_GET, num_iid=str(num_iid), fields=fields)
 
-    async def get_items(self, num_iids: list[int | str], fields: str = methods.DEFAULT_ITEM_FIELDS) -> TaobaoEnvelope:
+    async def get_items(
+        self, num_iids: list[int | str], fields: str = methods.DEFAULT_ITEM_FIELDS
+    ) -> TaobaoEnvelope:
         ids_str = ",".join(str(i) for i in num_iids)
         return await self._call(methods.ITEMS_LIST_GET, num_iids=ids_str, fields=fields)
 

@@ -12,27 +12,31 @@ Usage:
 
 from __future__ import annotations
 
+import contextlib
 import uuid
 from datetime import UTC, datetime
 from typing import Any
 
 import httpx
 import structlog
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from src.config import Settings, get_settings
 from src.currency import cny_to_rub
 from src.models import CatalogWatchlistEntry, SyncLog, TmallItem
-from src.notify import _fmt_sync_result, send as tg_send
+from src.notify import _fmt_sync_result
+from src.notify import send as tg_send
 from src.tmall.client import TmallClient
 from src.tmall.mock import MockTmallClient
 from src.tmall.schemas import TaobaoItem
-from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 log = structlog.get_logger(__name__)
 
 
-def _build_client(settings: Settings) -> tuple[TmallClient | MockTmallClient, httpx.AsyncClient | None]:
+def _build_client(
+    settings: Settings,
+) -> tuple[TmallClient | MockTmallClient, httpx.AsyncClient | None]:
     if settings.tmall_mode == "mock":
         return MockTmallClient(), None
     http = httpx.AsyncClient()
@@ -41,10 +45,8 @@ def _build_client(settings: Settings) -> tuple[TmallClient | MockTmallClient, ht
 
 def _to_row(item: TaobaoItem, correlation_id: str) -> dict[str, Any]:
     price_cny: float | None = None
-    try:
+    with contextlib.suppress(ValueError, TypeError):
         price_cny = float(item.price) if item.price else None
-    except (ValueError, TypeError):
-        pass
 
     price_rub: float | None = None
     if price_cny is not None:

@@ -12,10 +12,10 @@ from __future__ import annotations
 from typing import Any
 
 import structlog
+from sqlalchemy.orm import Session
 
 from src.jd import methods
 from src.jd.client import JdClient
-from sqlalchemy.orm import Session
 
 log = structlog.get_logger(__name__)
 

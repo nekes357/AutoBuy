@@ -87,6 +87,16 @@ class UnionClient:
             goods_req["sort"] = sort
         return await self._call(methods.GOODS_QUERY, {"goodsReq": goods_req})
 
+    async def query_by_skus(self, sku_ids: list[int | str]) -> UnionEnvelope:
+        """jd.union.open.goods.query with skuIds — look up specific SKUs.
+
+        Used for catalog checks: given a known list of JD SKU IDs, return
+        their current price / commission / promotability. Up to 100 SKUs per
+        call (JD limit); the caller is responsible for batching.
+        """
+        ids_str = ",".join(str(s) for s in sku_ids)
+        return await self._call(methods.GOODS_QUERY, {"goodsReq": {"skuIds": ids_str}})
+
     async def goods_bigfield(
         self,
         sku_ids: list[int | str],

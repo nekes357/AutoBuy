@@ -3,13 +3,18 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi.responses import HTMLResponse, PlainTextResponse
 from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from src.api.deps import db_session, require_api_key, settings_dep
 from src.config import Settings
+from src.jd_union.catalog_check import (
+    check_products,
+    load_product_bytes,
+    report_to_csv,
+)
 from src.models import CatalogWatchlistEntry, JdOrder, JdUnionProduct, SyncLog, TmallItem
 from src.sync import run_sync
 from src.sync_tmall import run_tmall_sync
@@ -189,7 +194,11 @@ def _tmall_to_feed(row: TmallItem) -> dict[str, Any]:
 
 @router.get("/catalog/watchlist", dependencies=[Depends(require_api_key)])
 def watchlist_list(session: Session = Depends(db_session)) -> list[dict[str, Any]]:
-    rows = session.execute(select(CatalogWatchlistEntry).order_by(CatalogWatchlistEntry.id)).scalars().all()
+    rows = (
+        session.execute(select(CatalogWatchlistEntry).order_by(CatalogWatchlistEntry.id))
+        .scalars()
+        .all()
+    )
     return [_entry_to_dict(r) for r in rows]
 
 
@@ -209,7 +218,9 @@ def watchlist_add(body: dict[str, Any], session: Session = Depends(db_session)) 
 
 
 @router.patch("/catalog/watchlist/{entry_id}", dependencies=[Depends(require_api_key)])
-def watchlist_update(entry_id: int, body: dict[str, Any], session: Session = Depends(db_session)) -> dict[str, Any]:
+def watchlist_update(
+    entry_id: int, body: dict[str, Any], session: Session = Depends(db_session)
+) -> dict[str, Any]:
     entry = session.get(CatalogWatchlistEntry, entry_id)
     if entry is None:
         raise HTTPException(status_code=404, detail="entry not found")
@@ -251,8 +262,14 @@ def _entry_to_dict(e: CatalogWatchlistEntry) -> dict[str, Any]:
 
 @router.get("/status", response_class=HTMLResponse)
 def status_page(session: Session = Depends(db_session)) -> str:
-    watchlist = session.execute(select(CatalogWatchlistEntry).order_by(CatalogWatchlistEntry.id)).scalars().all()
-    recent_syncs = session.execute(select(SyncLog).order_by(desc(SyncLog.id)).limit(10)).scalars().all()
+    watchlist = (
+        session.execute(select(CatalogWatchlistEntry).order_by(CatalogWatchlistEntry.id))
+        .scalars()
+        .all()
+    )
+    recent_syncs = (
+        session.execute(select(SyncLog).order_by(desc(SyncLog.id)).limit(10)).scalars().all()
+    )
     tmall_total = session.execute(select(func.count()).select_from(TmallItem)).scalar() or 0
     jd_total = session.execute(select(func.count()).select_from(JdOrder)).scalar() or 0
     now = datetime.now(UTC).strftime("%d.%m.%Y %H:%M UTC")
@@ -284,8 +301,12 @@ def status_page(session: Session = Depends(db_session)) -> str:
             f"</tr>"
         )
 
-    watchlist_rows = "".join(_row(e) for e in watchlist) or "<tr><td colspan='6'>Список пуст — добавьте категории</td></tr>"
-    sync_rows = "".join(_sync_row(s) for s in recent_syncs) or "<tr><td colspan='5'>Синхронизаций ещё не было</td></tr>"
+    watchlist_rows = "".join(_row(e) for e in watchlist) or (
+        "<tr><td colspan='6'>Список пуст — добавьте категории</td></tr>"
+    )
+    sync_rows = "".join(_sync_row(s) for s in recent_syncs) or (
+        "<tr><td colspan='5'>Синхронизаций ещё не было</td></tr>"
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="ru">
@@ -295,7 +316,8 @@ def status_page(session: Session = Depends(db_session)) -> str:
 <meta http-equiv="refresh" content="60">
 <title>FeedBridge — статус</title>
 <style>
-  body {{ font-family: -apple-system, sans-serif; max-width: 960px; margin: 40px auto; padding: 0 20px; color: #222; }}
+  body {{ font-family: -apple-system, sans-serif; max-width: 960px;
+         margin: 40px auto; padding: 0 20px; color: #222; }}
   h1 {{ font-size: 22px; margin-bottom: 4px; }}
   .meta {{ color: #888; font-size: 13px; margin-bottom: 32px; }}
   .cards {{ display: flex; gap: 16px; margin-bottom: 32px; flex-wrap: wrap; }}
@@ -314,9 +336,11 @@ def status_page(session: Session = Depends(db_session)) -> str:
 <div class="meta">Обновлено: {now} &nbsp;·&nbsp; страница обновляется каждые 60 сек</div>
 
 <div class="cards">
-  <div class="card"><div class="num">{tmall_total:,}</div><div class="label">товаров Tmall</div></div>
+  <div class="card"><div class="num">{tmall_total:,}</div>
+    <div class="label">товаров Tmall</div></div>
   <div class="card"><div class="num">{jd_total:,}</div><div class="label">заказов JD</div></div>
-  <div class="card"><div class="num">{len(watchlist)}</div><div class="label">категорий в слежении</div></div>
+  <div class="card"><div class="num">{len(watchlist)}</div>
+    <div class="label">категорий в слежении</div></div>
 </div>
 
 <h2>Категории в слежении</h2>
@@ -378,6 +402,34 @@ async def union_sync(
         "errors": sync_log.error_count,
         "keyword": keyword,
     }
+
+
+@router.post("/union/check", dependencies=[Depends(require_api_key)])
+async def union_check(
+    file: UploadFile = File(...),
+    format: str = Query(default="json", pattern="^(json|csv)$"),
+    settings: Settings = Depends(settings_dep),
+):
+    """Check a product catalog file (xlsx/csv) against JD Union.
+
+    The file's JD SKU is read from item.jd.com/<sku>.html URLs. Returns a
+    summary + per-row report. Pass ?format=csv to download the report as CSV.
+    """
+    data = await file.read()
+    try:
+        rows = load_product_bytes(data, file.filename or "upload.csv")
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail=f"could not parse file: {exc}") from exc
+
+    report = await check_products(rows, settings=settings)
+
+    if format == "csv":
+        return PlainTextResponse(
+            report_to_csv(report),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=union_check.csv"},
+        )
+    return {"summary": report.summary(), "results": [r.as_dict() for r in report.results]}
 
 
 @router.get("/union/products", dependencies=[Depends(require_api_key)])
