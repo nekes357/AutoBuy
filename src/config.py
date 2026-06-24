@@ -40,6 +40,13 @@ class Settings(BaseSettings):
     # for any realistic JD page (default page_size=100).
     sync_concurrency: int = 10
 
+    # --- JD Union (CPS affiliate) ---
+    jd_union_mode: Literal["mock", "live"] = "mock"
+    jd_union_app_key: str = ""
+    jd_union_app_secret: str = ""
+    # Affiliate site ID — usually required for promo-link methods, not for goods.
+    jd_union_site_id: str = ""
+
     # --- Tmall / Taobao Open Platform (taoworld.com) ---
     tmall_mode: Literal["mock", "live"] = "mock"
     tmall_app_key: str = ""

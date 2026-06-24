@@ -10,9 +10,10 @@ from sqlalchemy.orm import Session
 
 from src.api.deps import db_session, require_api_key, settings_dep
 from src.config import Settings
-from src.models import CatalogWatchlistEntry, JdOrder, SyncLog, TmallItem
+from src.models import CatalogWatchlistEntry, JdOrder, JdUnionProduct, SyncLog, TmallItem
 from src.sync import run_sync
 from src.sync_tmall import run_tmall_sync
+from src.sync_union import run_union_sync
 
 router = APIRouter()
 
@@ -353,3 +354,88 @@ async def jd_callback(request: Request) -> dict[str, Any]:
             body = (await request.body()).decode("utf-8", errors="replace")
     log.info("jd.callback", method=request.method, query=dict(request.query_params), body=body)
     return {"status": "ok"}
+
+
+@router.post("/union/sync", dependencies=[Depends(require_api_key)])
+async def union_sync(
+    keyword: str = Query(..., min_length=1),
+    with_bigfield: bool = Query(default=True),
+    session: Session = Depends(db_session),
+    settings: Settings = Depends(settings_dep),
+) -> dict[str, Any]:
+    """Search JD Union by keyword and persist results to jd_union_products."""
+    sync_log = await run_union_sync(
+        session,
+        keyword=keyword,
+        with_bigfield=with_bigfield,
+        settings=settings,
+    )
+    return {
+        "id": sync_log.id,
+        "correlation_id": sync_log.correlation_id,
+        "fetched": sync_log.fetched_count,
+        "new": sync_log.new_count,
+        "errors": sync_log.error_count,
+        "keyword": keyword,
+    }
+
+
+@router.get("/union/products", dependencies=[Depends(require_api_key)])
+def list_union_products(
+    limit: int = 50,
+    session: Session = Depends(db_session),
+) -> list[dict[str, Any]]:
+    rows = (
+        session.execute(
+            select(JdUnionProduct)
+            .order_by(desc(JdUnionProduct.fetched_at))
+            .limit(limit)
+        )
+        .scalars()
+        .all()
+    )
+    return [
+        {
+            "sku_id": r.sku_id,
+            "sku_name": r.sku_name,
+            "price_cny": r.price_cny,
+            "price_rub": r.price_rub,
+            "brand_name": r.brand_name,
+            "shop_name": r.shop_name,
+            "category_name": r.category_name,
+            "commission": r.commission,
+            "commission_share": r.commission_share,
+            "in_order_count_30d": r.in_order_count_30d,
+            "material_url": r.material_url,
+            "main_image_url": r.main_image_url,
+        }
+        for r in rows
+    ]
+
+
+@router.get("/union/products/{sku_id}", dependencies=[Depends(require_api_key)])
+def union_product_detail(sku_id: str, session: Session = Depends(db_session)) -> dict[str, Any]:
+    row = session.get(JdUnionProduct, sku_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="union product not found")
+    return {
+        "sku_id": row.sku_id,
+        "sku_name": row.sku_name,
+        "price_cny": row.price_cny,
+        "price_rub": row.price_rub,
+        "lowest_price_cny": row.lowest_price_cny,
+        "brand_name": row.brand_name,
+        "shop_id": row.shop_id,
+        "shop_name": row.shop_name,
+        "category_id": row.category_id,
+        "category_name": row.category_name,
+        "material_url": row.material_url,
+        "main_image_url": row.main_image_url,
+        "commission": row.commission,
+        "commission_share": row.commission_share,
+        "in_order_count_30d": row.in_order_count_30d,
+        "ware_qd": row.ware_qd,
+        "wdesc": row.wdesc,
+        "fetched_at": row.fetched_at.isoformat() if row.fetched_at else None,
+        "raw_payload": row.raw_payload,
+    }

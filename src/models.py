@@ -82,6 +82,46 @@ class TmallItem(Base):
     )
 
 
+class JdUnionProduct(Base):
+    """JD Union (affiliate / CPS) goods record.
+
+    Distinct from JdProduct (which is for VOP B2B catalog) — Union exposes
+    affiliate-marketing-oriented data with commission rates, promo links and
+    aggregated sales counts.
+    """
+
+    __tablename__ = "jd_union_products"
+
+    sku_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    sku_name: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    price_cny: Mapped[float | None] = mapped_column(nullable=True)
+    price_rub: Mapped[float | None] = mapped_column(nullable=True)
+    lowest_price_cny: Mapped[float | None] = mapped_column(nullable=True)
+
+    brand_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    shop_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    shop_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    category_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    category_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    material_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    main_image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    commission: Mapped[float | None] = mapped_column(nullable=True)
+    commission_share: Mapped[float | None] = mapped_column(nullable=True)
+    in_order_count_30d: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # Big fields (only filled when bigfield.query was run).
+    ware_qd: Mapped[str | None] = mapped_column(Text, nullable=True)
+    wdesc: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    raw_payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+
 class CatalogWatchlistEntry(Base):
     """Which categories / queries we actively sync from each source."""
 
