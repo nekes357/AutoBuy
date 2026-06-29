@@ -32,6 +32,7 @@ from src.config import Settings, get_settings
 from src.currency import cny_to_rub
 from src.fileio import read_tabular
 from src.models import SyncLog, TmallItem
+from src.tmall.apify_client import ApifyTaobaoClient
 from src.tmall.client import TmallClient
 from src.tmall.links import parse_ref
 from src.tmall.mock import MockTmallClient
@@ -46,7 +47,8 @@ SHOP_PAGE_SIZE = 40
 # Column names we look for when a file is provided.
 _URL_COLUMNS = ("url", "link", "active_url", "any_url", "ссылка", "товар")
 
-ClientPair = tuple[TmallClient | MockTmallClient, httpx.AsyncClient | None]
+AnyTaobaoClient = TmallClient | MockTmallClient | ApifyTaobaoClient
+ClientPair = tuple[AnyTaobaoClient, httpx.AsyncClient | None]
 
 
 @dataclass
@@ -93,6 +95,8 @@ def _build_client(settings: Settings) -> ClientPair:
     if settings.tmall_mode == "mock":
         return MockTmallClient(), None
     http = httpx.AsyncClient()
+    if settings.tmall_mode == "apify":
+        return ApifyTaobaoClient(settings, http), http
     return TmallClient(settings, http), http
 
 
@@ -119,7 +123,7 @@ def _extract_urls_from_file(data: bytes, filename: str) -> list[str]:
 
 
 async def _resolve_sellers(
-    client: TmallClient | MockTmallClient,
+    client: AnyTaobaoClient,
     urls: list[str],
     report: ShopSyncReport,
 ) -> dict[str, str | None]:
@@ -172,7 +176,7 @@ def _to_row(item: TaobaoItem, nick: str, correlation_id: str) -> dict[str, Any]:
 
 
 async def _sync_one_shop(
-    client: TmallClient | MockTmallClient,
+    client: AnyTaobaoClient,
     session: Session,
     nick: str,
     correlation_id: str,

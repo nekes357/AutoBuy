@@ -47,8 +47,12 @@ class Settings(BaseSettings):
     # Affiliate site ID — usually required for promo-link methods, not for goods.
     jd_union_site_id: str = ""
 
+    # --- Apify (web scraping, alternative to Taobao Open Platform) ---
+    apify_api_token: str = ""
+    apify_taobao_actor: str = "epctex/taobao-scraper"
+
     # --- Tmall / Taobao Open Platform (taoworld.com) ---
-    tmall_mode: Literal["mock", "live"] = "mock"
+    tmall_mode: Literal["mock", "live", "apify"] = "mock"
     tmall_app_key: str = ""
     tmall_app_secret: str = ""
     # How many item IDs to fetch in one taobao.items.list.get call (max 40).
