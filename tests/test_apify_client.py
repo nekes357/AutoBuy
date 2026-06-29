@@ -196,3 +196,35 @@ async def test_get_shop_without_cache_returns_minimal():
     shop = env.shop()
     assert shop is not None
     assert shop.nick == "some_nick"
+
+
+def test_format_seller_shop_id():
+    """shop442584533 -> {"shopId": "442584533"}."""
+    client = ApifyTaobaoClient(_settings(), httpx.AsyncClient())
+    assert client._format_seller("shop442584533") == {"shopId": "442584533"}
+
+
+def test_format_seller_numeric():
+    """Bare numeric string passed as-is (seller ID)."""
+    client = ApifyTaobaoClient(_settings(), httpx.AsyncClient())
+    assert client._format_seller("20133891") == "20133891"
+
+
+def test_format_seller_nick():
+    """Chinese shop name or handle passed as-is."""
+    client = ApifyTaobaoClient(_settings(), httpx.AsyncClient())
+    assert client._format_seller("国丰企业店") == "国丰企业店"
+
+
+@pytest.mark.asyncio
+async def test_get_item_stores_seller_hint():
+    """After get_item, the seller hint is stored for get_shop_items."""
+    payload = {**ITEM_PAYLOAD, "sellerId": "2206553836067"}
+    with respx.mock:
+        respx.post(_actor_url()).respond(200, json=[payload])
+        async with httpx.AsyncClient() as http:
+            client = ApifyTaobaoClient(_settings(), http)
+            await client.get_item("612286553782")
+
+    assert client._seller_hints["real_taobao_shop"] == {"sellerId": "2206553836067"}
+    assert client._format_seller("real_taobao_shop") == {"sellerId": "2206553836067"}

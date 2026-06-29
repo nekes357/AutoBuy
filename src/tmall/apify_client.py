@@ -5,7 +5,7 @@ registration and review), this client runs an Apify actor that scrapes
 Taobao/Tmall product pages directly.
 
 Default actor: zen-studio/taobao-seller-products-scraper
-Input:  {"sellers": ["https://shop123.taobao.com"], "maxItemsPerSeller": 5000}
+Input:  {"sellers": [{"shopId":"442584533"}], "maxItemsPerSeller": 500}
 Output: [{itemId, title, shopName, price, mainPictureUrl, url, ...}, ...]
 
 Requires only an Apify API token (free tier gives 5 USD/month).
@@ -16,6 +16,7 @@ so the shop-sync orchestrator works unchanged.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import httpx
@@ -28,6 +29,8 @@ log = structlog.get_logger(__name__)
 
 APIFY_API = "https://api.apify.com/v2"
 DEFAULT_ACTOR = "zen-studio/taobao-seller-products-scraper"
+
+_SHOP_ID_RE = re.compile(r"^shop(\d+)$")
 
 
 class ApifyError(RuntimeError):
@@ -45,6 +48,7 @@ class ApifyTaobaoClient:
         self._actor = settings.apify_taobao_actor or DEFAULT_ACTOR
         self._http = http
         self._shop_cache: dict[str, list[dict[str, Any]]] = {}
+        self._seller_hints: dict[str, dict[str, str] | str] = {}
 
     async def _run_actor(
         self,
@@ -94,13 +98,32 @@ class ApifyTaobaoClient:
             "cid": raw.get("categoryId") or raw.get("cid"),
         }
 
+    def _format_seller(self, nick: str) -> dict[str, str] | str:
+        if nick in self._seller_hints:
+            return self._seller_hints[nick]
+        m = _SHOP_ID_RE.match(nick)
+        if m:
+            return {"shopId": m.group(1)}
+        if nick.isdigit():
+            return nick
+        return nick
+
     async def get_item(self, num_iid: int | str, **__: Any) -> TaobaoEnvelope:
         results = await self._run_actor({
             "sellers": [f"itemId:{num_iid}"],
             "maxItemsPerSeller": 1,
         })
         if results:
-            mapped = self._map_item(results[0])
+            raw = results[0]
+            mapped = self._map_item(raw)
+            nick = mapped["nick"]
+            if nick:
+                seller_id = raw.get("sellerId")
+                shop_id = raw.get("shopId")
+                if seller_id:
+                    self._seller_hints[nick] = {"sellerId": str(seller_id)}
+                elif shop_id:
+                    self._seller_hints[nick] = {"shopId": str(shop_id)}
             return TaobaoEnvelope(**{"item_get_response": {"item": mapped}})
         return TaobaoEnvelope()
 
@@ -130,9 +153,10 @@ class ApifyTaobaoClient:
         **__: Any,
     ) -> TaobaoEnvelope:
         if nick not in self._shop_cache:
+            seller = self._format_seller(nick)
             items = await self._run_actor(
                 {
-                    "sellers": [nick],
+                    "sellers": [seller],
                     "maxItemsPerSeller": 5000,
                     "sort": "best_selling",
                 },
