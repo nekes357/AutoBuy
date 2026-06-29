@@ -28,6 +28,7 @@ from sqlalchemy.orm import Session
 
 from src.config import Settings, get_settings
 from src.currency import cny_to_rub
+from src.fileio import read_tabular, read_tabular_path
 from src.jd_union.client import UnionClient
 from src.jd_union.mock import MockUnionClient
 from src.jd_union.schemas import UnionGoodsItem
@@ -173,30 +174,12 @@ def _cell(raw: tuple[Any, ...], idx: int | None) -> str | None:
 
 def load_product_file(path: str | Path) -> list[ProductRow]:
     """Read an .xlsx or .csv product file into ProductRows."""
-    path = Path(path)
-    if path.suffix.lower() in (".xlsx", ".xlsm"):
-        return parse_rows(_read_xlsx(path.read_bytes()))
-    return parse_rows(_read_csv(path.read_text("utf-8")))
+    return parse_rows(read_tabular_path(path))
 
 
 def load_product_bytes(data: bytes, filename: str) -> list[ProductRow]:
     """Read product rows from in-memory bytes (e.g. an HTTP upload)."""
-    if filename.lower().endswith((".xlsx", ".xlsm")):
-        return parse_rows(_read_xlsx(data))
-    return parse_rows(_read_csv(data.decode("utf-8")))
-
-
-def _read_xlsx(data: bytes) -> list[tuple[Any, ...]]:
-    import openpyxl  # local import: heavy, only needed for xlsx
-
-    wb = openpyxl.load_workbook(io.BytesIO(data), read_only=True, data_only=True)
-    ws = wb[wb.sheetnames[0]]
-    return list(ws.iter_rows(values_only=True))
-
-
-def _read_csv(text: str) -> list[tuple[Any, ...]]:
-    reader = csv.reader(io.StringIO(text))
-    return [tuple(r) for r in reader]
+    return parse_rows(read_tabular(data, filename))
 
 
 async def check_products(

@@ -69,6 +69,7 @@ class TmallItem(Base):
 
     num_iid: Mapped[str] = mapped_column(String(64), primary_key=True)
     title: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    seller_nick: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     price_cny: Mapped[float | None] = mapped_column(nullable=True)
     price_rub: Mapped[float | None] = mapped_column(nullable=True)
     stock: Mapped[int | None] = mapped_column(Integer, nullable=True)

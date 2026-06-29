@@ -25,6 +25,7 @@ from src.models import (
     TmallItem,
 )
 from src.sync import run_sync
+from src.sync_taobao_shop import list_shop_items, run_shop_sync
 from src.sync_tmall import run_tmall_sync
 from src.sync_union import run_union_sync
 
@@ -116,6 +117,57 @@ def order_detail(jd_order_id: str, session: Session = Depends(db_session)) -> di
         "raw_payload": row.raw_payload,
     }
 
+
+# ---------------------------------------------------------------------------
+# Taobao shop sync — pull a seller's whole catalogue from item/shop links
+# ---------------------------------------------------------------------------
+
+@router.post("/shop/sync", dependencies=[Depends(require_api_key)])
+async def shop_sync(
+    url: str | None = Query(default=None, description="Single Taobao item/shop URL"),
+    file: UploadFile | None = File(default=None),
+    session: Session = Depends(db_session),
+    settings: Settings = Depends(settings_dep),
+) -> dict[str, Any]:
+    """Sync the full catalogue of every seller referenced by `url` or an
+    uploaded file of links (xlsx/csv). Items land in tmall_items tagged with
+    seller_nick."""
+    urls = [url] if url else None
+    file_bytes = await file.read() if file is not None else None
+    if not urls and not file_bytes:
+        raise HTTPException(status_code=400, detail="provide url= or a file")
+
+    report = await run_shop_sync(
+        session,
+        file_bytes=file_bytes,
+        filename=file.filename if file is not None else None,
+        urls=urls,
+        settings=settings,
+    )
+    return report.summary()
+
+
+@router.get("/shop/items", dependencies=[Depends(require_api_key)])
+def shop_items(
+    seller: str = Query(..., description="seller_nick to list items for"),
+    limit: int = 200,
+    session: Session = Depends(db_session),
+) -> list[dict[str, Any]]:
+    rows = list_shop_items(session, seller, limit=limit)
+    return [
+        {
+            "num_iid": r.num_iid,
+            "title": r.title,
+            "seller_nick": r.seller_nick,
+            "price_cny": r.price_cny,
+            "price_rub": r.price_rub,
+            "stock": r.stock,
+            "pic_url": r.pic_url,
+            "detail_url": r.detail_url,
+            "category_id": r.category_id,
+        }
+        for r in rows
+    ]
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,14 @@
+{
+  "shop_get_response": {
+    "shop": {
+      "sid": 778899,
+      "cid": 1101,
+      "title": "Demo Taobao Магазин электроники",
+      "nick": "demo_taobao_shop",
+      "desc": "Официальный магазин-витрина для демо-режима коннектора.",
+      "pic_path": "/imgextra/i1/778899/shoplogo.jpg",
+      "created": "2021-03-01 10:00:00",
+      "modified": "2026-06-20 12:00:00"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "items_search_response": {
+    "total_results": 3,
+    "items": {
+      "item": [
+        {
+          "num_iid": 612286553784,
+          "title": "Powerbank 20000mAh 22.5W быстрая зарядка",
+          "nick": "demo_taobao_shop",
+          "price": "199.00",
+          "pic_url": "https://img.alicdn.com/imgextra/i3/612286553784/O1CN01.jpg",
+          "detail_url": "https://item.taobao.com/item.htm?id=612286553784",
+          "num": 88,
+          "cid": 50010865,
+          "modified": "2026-06-15 11:00:00",
+          "skus": {"sku": [{"sku_id": "7000000021", "quantity": 88, "price": "199.00"}]},
+          "item_imgs": {"item_img": [{"url": "https://img.alicdn.com/612286553784_1.jpg"}]}
+        }
+      ]
+    }
+  }
+}

@@ -27,3 +27,14 @@ class MockTmallClient:
 
     async def search_items(self, query: str, **__) -> TaobaoEnvelope:
         return _load("tmall_items_list.json")
+
+    async def get_shop(self, nick: str, **__) -> TaobaoEnvelope:  # noqa: ARG002
+        return _load("taobao_shop_get.json")
+
+    async def get_shop_items(self, nick: str, page_no: int = 1, **__) -> TaobaoEnvelope:  # noqa: ARG002
+        # Page-aware: page 1 has 2 items, page 2 has 1, page 3+ is empty (stops pagination).
+        if page_no <= 1:
+            return _load("taobao_shop_items_page1.json")
+        if page_no == 2:
+            return _load("taobao_shop_items_page2.json")
+        return _load("taobao_shop_items_empty.json")

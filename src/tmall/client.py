@@ -83,3 +83,31 @@ class TmallClient:
             page_size=str(page_size),
             fields=fields,
         )
+
+    async def get_shop(
+        self, nick: str, fields: str = methods.DEFAULT_SHOP_FIELDS
+    ) -> TaobaoEnvelope:
+        """taobao.shop.get — shop metadata for a seller nickname."""
+        return await self._call(methods.SHOP_GET, nick=nick, fields=fields)
+
+    async def get_shop_items(
+        self,
+        nick: str,
+        page_no: int = 1,
+        page_size: int = 40,
+        fields: str = methods.DEFAULT_ITEM_FIELDS,
+    ) -> TaobaoEnvelope:
+        """All on-sale items for a seller, paginated.
+
+        Uses items.search filtered by `nicks=<seller>`. Real-world API
+        availability depends on the app's granted permissions; the call shape
+        is centralised here so it can be swapped (e.g. to items.onsale.get for
+        a self-owned shop) without touching the orchestrator.
+        """
+        return await self._call(
+            methods.ITEMS_SEARCH,
+            nicks=nick,
+            page_no=str(page_no),
+            page_size=str(page_size),
+            fields=fields,
+        )
