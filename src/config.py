@@ -49,7 +49,7 @@ class Settings(BaseSettings):
 
     # --- Apify (web scraping, alternative to Taobao Open Platform) ---
     apify_api_token: str = ""
-    apify_taobao_actor: str = "epctex/taobao-scraper"
+    apify_taobao_actor: str = "zen-studio/taobao-seller-products-scraper"
 
     # --- Tmall / Taobao Open Platform (taoworld.com) ---
     tmall_mode: Literal["mock", "live", "apify"] = "mock"
