@@ -51,7 +51,8 @@ class ApifyTaobaoClient:
         input_data: dict[str, Any],
         timeout: float = 300,
     ) -> list[dict[str, Any]]:
-        url = f"{APIFY_API}/acts/{self._actor}/run-sync-get-dataset-items"
+        actor_slug = self._actor.replace("/", "~")
+        url = f"{APIFY_API}/acts/{actor_slug}/run-sync-get-dataset-items"
         log.info(
             "apify.run_actor",
             actor=self._actor,

@@ -23,7 +23,7 @@ def _settings():
 
 
 def _actor_url():
-    return f"{APIFY_API}/acts/{ACTOR}/run-sync-get-dataset-items"
+    return f"{APIFY_API}/acts/{ACTOR.replace('/', '~')}/run-sync-get-dataset-items"
 
 
 ITEM_PAYLOAD = {
